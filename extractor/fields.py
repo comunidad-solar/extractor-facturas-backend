@@ -102,22 +102,8 @@ FIELDS: list[Field] = [
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def get_field(key: str) -> Optional[Field]:
-    """Devuelve un Field por su key. Útil en el parser y en la GUI."""
+    """Devuelve un Field por su key."""
     return next((f for f in FIELDS if f.key == key), None)
-
-
-def get_fields_by_bloque(bloque: str) -> list[Field]:
-    """Devuelve todos los campos de un bloque específico. Usado por la GUI para renderizar secciones."""
-    return [f for f in FIELDS if f.bloque == bloque]
-
-
-def get_bloques() -> list[str]:
-    """Devuelve la lista de bloques únicos, en orden de aparición. Usado por la GUI."""
-    seen = []
-    for f in FIELDS:
-        if f.bloque not in seen:
-            seen.append(f.bloque)
-    return seen
 
 
 def required_keys() -> list[str]:
