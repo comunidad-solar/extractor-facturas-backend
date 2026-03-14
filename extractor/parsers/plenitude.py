@@ -1,0 +1,99 @@
+# extractor/parsers/plenitude.py
+# Parser para facturas de Eni Plenitude Iberia, SL.
+# PDF basado en imagen — el texto proviene de OCR (Tesseract).
+# Sobrescribe 3 métodos porque el formato difiere del BaseParser:
+#
+#   extraer_comercializadora(): captura "Eni Plenitude Iberia, SL" del encabezado
+#   extraer_precios_potencia(): OCR lee "día" sin acento — regex del BaseParser falla
+#   extraer_alquiler():         OCR lee "dia" sin acento — captura valor directo €/día
+#
+# Modificado: 2026-02-27 | Rodrigo Costa
+
+import re
+from typing import Optional
+
+from ..base import norm
+from .base_parser import BaseParser
+
+
+class PlenitudeParser(BaseParser):
+
+    # ── COMERCIALIZADORA ──────────────────────────────────────────────────────
+
+    def extraer_comercializadora(self) -> Optional[str]:
+        """
+        Nombre legal: "Eni Plenitude Iberia, SL"
+        Aparece en el encabezado de la página 1.
+        """
+        m = re.search(
+            r"(Eni\s+Plenitude\s+Iberia\s*,?\s*S\.?L\.?)",
+            self.text, re.IGNORECASE
+        )
+        if m:
+            val = re.sub(r"\s+", " ", m.group(1)).strip().rstrip(",.")
+            self.raw["comercializadora"] = m.group(0)[:80]
+            return val
+        return super().extraer_comercializadora()
+
+    # ── PRECIOS DE POTENCIA ───────────────────────────────────────────────────
+
+    def extraer_precios_potencia(self) -> tuple[Optional[str], Optional[str]]:
+        """
+        Formato: "3,4500 kW * 0,073782 €/kW día * 30 dias"
+        OCR lee "día" y "dias" sin acento — el BaseParser usa d[ií]as? y falla.
+        Se amplía el regex para aceptar con y sin acento.
+        """
+        pp1 = pp2 = None
+        src1 = src2 = ""
+
+        for i, linha in enumerate(self.linhas):
+            l = linha.lower()
+            if not any(x in l for x in ["periodo p1", "periodo p2", "p1 (", "p2 ("]):
+                continue
+
+            trecho = " ".join(self.linhas[i:i+3])
+
+            # "X kW * PRECIO €/kW día * N dias" — Plenitude
+            m = re.search(
+                r"[0-9,\.]+\s*kW\s*\*\s*([0-9]+[,\.][0-9]+)\s*€/kW\s+d[ií]a",
+                trecho, re.IGNORECASE
+            )
+            if m:
+                precio = norm(m.group(1))
+                if re.search(r"\bP1\b", linha, re.IGNORECASE) and pp1 is None:
+                    pp1  = precio
+                    src1 = linha[:80]
+                elif re.search(r"\bP2\b", linha, re.IGNORECASE) and pp2 is None:
+                    pp2  = precio
+                    src2 = linha[:80]
+
+        # Fallback al BaseParser si no encontró nada
+        if pp1 is None and pp2 is None:
+            return super().extraer_precios_potencia()
+
+        self.raw["pp_p1"] = src1
+        self.raw["pp_p2"] = src2
+        return pp1, pp2
+
+    # ── ALQUILER ──────────────────────────────────────────────────────────────
+
+    def extraer_alquiler(self) -> Optional[str]:
+        """
+        Formato: "30 dias * 0,026667 €/día"
+        OCR puede leer "dia" sin acento — se amplía el regex.
+        """
+        for linha in self.linhas:
+            l = linha.lower()
+            if not any(x in l for x in ["alquiler", "equipo", "medida", "contador"]):
+                continue
+
+            # Patrón explícito: "N dias * PRECIO €/día" — con o sin acento
+            m = re.search(
+                r"\(?\s*[0-9]+\s*d[ií]as?\s*\*\s*([0-9]+[,\.][0-9]+)\s*€/d[ií]a\s*\)?",
+                linha, re.IGNORECASE
+            )
+            if m:
+                self.raw["alq_eq_dia"] = linha[:80]
+                return norm(m.group(1))
+
+        return super().extraer_alquiler()

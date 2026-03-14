@@ -1,0 +1,19 @@
+# Extracción PDF
+pdfplumber
+pymupdf
+
+# OCR (PDFs basados en imagen)
+pytesseract
+pdf2image
+pillow
+
+# API REST
+fastapi
+uvicorn[standard]
+python-multipart
+
+# Validación de datos
+pydantic
+
+# HTTP (llamadas a API Ingebau)
+requests
