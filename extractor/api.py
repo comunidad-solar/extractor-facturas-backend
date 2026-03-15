@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from .base import to_date, fmt_date, log
 
 load_dotenv()
-API_URL   = os.getenv("API_URL", "http://13.39.57.137:8004/Cups")
+API_URL   = os.getenv("API_URL")
 API_TOKEN = os.getenv("API_TOKEN")
 
 

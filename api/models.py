@@ -8,20 +8,25 @@ from typing import Optional
 
 
 class ExtractionResponse(BaseModel):
+
     # ── Campos extraídos del PDF ──────────────────────────────────────────────
-    cups:               Optional[str] = None
-    periodo_inicio:     Optional[str] = None
-    periodo_fin:        Optional[str] = None
-    comercializadora:   Optional[str] = None
+    cups:               Optional[str]   = None
+    periodo_inicio:     Optional[str]   = None
+    periodo_fin:        Optional[str]   = None
+    comercializadora:   Optional[str]   = None
     pp_p1:              Optional[float] = None
     pp_p2:              Optional[float] = None
+    pp_p3:              Optional[float] = None  # ex: CoxParser (3.0TD)
+    pp_p4:              Optional[float] = None  # ex: CoxParser (3.0TD)
+    pp_p5:              Optional[float] = None  # ex: CoxParser (3.0TD)
+    pp_p6:              Optional[float] = None  # ex: CoxParser (3.0TD)
     imp_ele:            Optional[float] = None
-    iva:                Optional[int] = None
+    iva:                Optional[int]   = None
     alq_eq_dia:         Optional[float] = None
 
     # ── Campos completados por API Ingebau ────────────────────────────────────
-    tarifa_acceso:      Optional[str] = None
-    distribuidora:      Optional[str] = None
+    tarifa_acceso:      Optional[str]   = None
+    distribuidora:      Optional[str]   = None
     pot_p1_kw:          Optional[float] = None
     pot_p2_kw:          Optional[float] = None
     pot_p3_kw:          Optional[float] = None
@@ -34,16 +39,9 @@ class ExtractionResponse(BaseModel):
     consumo_p4_kwh:     Optional[float] = None
     consumo_p5_kwh:     Optional[float] = None
     consumo_p6_kwh:     Optional[float] = None
-    dias_facturados:    Optional[str] = None
-    pp_p1:              Optional[float] = None
-    pp_p2:              Optional[float] = None
-    pp_p3:              Optional[float] = None  # ← adicionar
-    pp_p4:              Optional[float] = None  # ← adicionar
-    pp_p5:              Optional[float] = None  # ← adicionar
-    pp_p6:              Optional[float] = None  # ← adicionar
-    imp_ele:            Optional[float] = None
+    dias_facturados:    Optional[str]   = None
 
     # ── Metadatos ─────────────────────────────────────────────────────────────
-    api_ok:             bool = False
-    api_error:          Optional[str] = None
-    fichero_json:       Optional[str] = None  # ruta del JSON guardado
+    api_ok:             bool            = False
+    api_error:          Optional[str]   = None
+    fichero_json:       Optional[str]   = None
