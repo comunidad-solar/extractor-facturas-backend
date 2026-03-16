@@ -15,5 +15,6 @@ python-multipart
 # Validación de datos
 pydantic
 
-# HTTP (llamadas a API Ingebau)
+# HTTP (llamadas a API Ingebau y proxies async)
 requests
+httpx
