@@ -19,14 +19,11 @@ app = FastAPI(
 )
 
 # CORS — permite peticiones desde el frontend React
-_frontend_url = os.getenv("FRONTEND_URL", "")
-_origins = ["http://localhost:3000", "http://localhost:5173"]
-if _frontend_url and _frontend_url not in _origins:
-    _origins.append(_frontend_url)
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_origins,
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -39,3 +36,8 @@ app.include_router(enviar_router)
 @app.get("/")
 def root():
     return {"status": "ok", "version": "1.0.0"}
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "service": "extractor-facturas"}
