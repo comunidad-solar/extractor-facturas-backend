@@ -19,7 +19,7 @@ app = FastAPI(
 )
 
 # CORS — permite peticiones desde el frontend React
-_frontend_url = os.getenv("FRONTEND_URL", "")
+_frontend_url = "https://master.dsg7um3zm296x.amplifyapp.com"
 _origins = ["http://localhost:3000", "http://localhost:5173"]
 if _frontend_url and _frontend_url not in _origins:
     _origins.append(_frontend_url)
