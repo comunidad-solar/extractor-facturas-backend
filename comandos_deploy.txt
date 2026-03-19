@@ -1,0 +1,1 @@
+cd /home/ubuntu/extractor-facturas-backend && git pull origin main && docker stop extractor-facturas && docker rm extractor-facturas && docker build -t extractor-facturas . && docker run -d --name extractor-facturas --env-file .env.production -p 8001:8000 --restart always extractor-facturas
