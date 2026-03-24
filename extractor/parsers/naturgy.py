@@ -86,6 +86,23 @@ class NaturgyParser(BaseParser):
                 except ValueError:
                     pass
 
+        # Fallback: formato Tipo Mínimo Comunitario "X,XXX MWh  Y,YY€/MWh  Z,ZZ€"
+        for linha in self.linhas_clean:
+            l = linha.lower()
+            if "impuesto electricidad" not in l:
+                continue
+            # Captura la tasa €/MWh (no es un porcentaje, es el precio unitario)
+            m = re.search(
+                r"impuesto electricidad.*?m[ií]nimo comunitario.*?([0-9]+[,\.][0-9]+)\s*€/MWh",
+                linha, re.IGNORECASE
+            )
+            if m:
+                try:
+                    self.raw["imp_ele"] = linha[:80]
+                    return norm(m.group(1))  # €/MWh, no multiplicar × 100
+                except ValueError:
+                    pass
+
         return None
 
     def extraer_alquiler(self):
