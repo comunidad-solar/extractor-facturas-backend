@@ -83,13 +83,24 @@ class BaseParser:
         Extrae el CUPS del PDF.
         Soporta formato junto (ES0021...) y separado por espacios (ES 0021 0000...).
         """
-        # Formato junto
-        m = re.search(r"(ES[0-9]{16,20}[A-Z0-9]{0,4})", self.text)
-        if m:
+        # 1ª prioridad — CUPS por contexto explícito ("cups" en la línea)
+        for linha in self.linhas:
+            if "cups" not in linha.lower():
+                continue
+            m = re.search(r"(ES[0-9]{16,20}[A-Z0-9]{2,4})", linha)
+            if m:
+                self.raw["cups"] = m.group(0)[:80]
+                return m.group(1)
+
+        # 2ª prioridad — regex genérico excluyendo IBANs
+        for m in re.finditer(r"(ES[0-9]{16,20}[A-Z0-9]{0,4})", self.text):
+            contexto = self.text[max(0, m.start() - 10):m.start()].upper()
+            if "IBAN" in contexto:
+                continue
             self.raw["cups"] = m.group(0)[:80]
             return m.group(1)
 
-        # Formato con espacios
+        # 3ª prioridad — formato con espacios
         m = re.search(
             r"(ES(?:\s+[A-Z0-9]{4}){4,6}(?:\s+[A-Z0-9]{1,4})?)",
             self.text, re.IGNORECASE
