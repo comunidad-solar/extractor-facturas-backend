@@ -110,6 +110,47 @@ class EndesaParser(BaseParser):
         finally:
             self.linhas = linhas_originais
 
+    # ── IMPORTE TOTAL ─────────────────────────────────────────────────────────
+
+    def extraer_importe_factura(self):
+        """
+        Endesa: a fatura principal tem "TOTAL 48,68 €" (sem "IMPORTE FACTURA").
+        A sub-fatura Endesa X tem "TOTAL IMPORTE FACTURA 5,09 €".
+        Cortar antes de "FACTURA ENDESA X" para evitar capturar o total errado.
+        Depois procurar "Total X,XX €" ou "TOTAL X,XX €" no texto cortado.
+        """
+        corte = re.search(
+            r"FACTURA\s+ENDESA\s+X|ENDESA\s+X\s+SERVICIOS",
+            self.text, re.IGNORECASE
+        )
+        texto = self.text[:corte.start()] if corte else self.text
+
+        patrones = [
+            r'(?:^|\n)\s*TOTAL\s+([0-9]+[,\.][0-9]+)\s*€',
+            r'Total\s+([0-9]+[,\.][0-9]+)\s*€\s*\n',
+        ]
+        for patron in patrones:
+            m = re.search(patron, texto, re.IGNORECASE | re.MULTILINE)
+            if m:
+                try:
+                    val = float(m.group(1).replace(",", "."))
+                    if 1.0 <= val <= 99999.0:
+                        self.raw["importe_factura"] = m.group(0).strip()[:80]
+                        return str(val)
+                except ValueError:
+                    pass
+
+        # Fallback ao BaseParser com texto cortado
+        texto_original   = self.text
+        linhas_originais = self.linhas
+        self.text   = texto
+        self.linhas = texto.splitlines()
+        try:
+            return super().extraer_importe_factura()
+        finally:
+            self.text   = texto_original
+            self.linhas = linhas_originais
+
     # ── IMPUESTO ELÉCTRICO ────────────────────────────────────────────────────
 
     def extraer_imp_ele(self):

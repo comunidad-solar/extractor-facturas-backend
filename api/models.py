@@ -29,6 +29,7 @@ class ExtractionResponse(BaseModel):
     imp_ele:            Optional[float] = None
     iva:                Optional[int]   = None
     alq_eq_dia:         Optional[float] = None
+    importe_factura:    Optional[float] = None
 
     # ── Campos completados por API Ingebau ────────────────────────────────────
     tarifa_acceso:      Optional[str]   = None
