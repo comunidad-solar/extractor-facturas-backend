@@ -105,10 +105,12 @@ class PlenitudeParser(BaseParser):
         Formato Plenitude (OCR):
           "Consumo Fácil (29/07/2025 - 27/08/2025): 102,0000 kWh * 0,108981 €/kWh"
         Precio único — guardar solo en pe_p1.
+        Captura el número inmediatamente anterior a "€/kWh" (precio unitario),
+        no el primero de la línea (que es la cantidad kWh).
         """
         patron_unico = re.compile(
-            r'Consumo\s+F[aá]cil.*?(\d+[.,]\d+)\s*€/kWh',
-            re.IGNORECASE | re.DOTALL
+            r'Consumo\s+F[aá]cil[^\n]*?(\d+[.,]\d+)\s*€/kWh',
+            re.IGNORECASE
         )
         m = patron_unico.search(self.text)
         if m:
