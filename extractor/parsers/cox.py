@@ -190,3 +190,37 @@ class CoxParser(BaseParser):
             print(f"  ⚠️  CoxParser.extraer_precios_potencia — error con fitz: {e}")
 
         return super().extraer_precios_potencia()
+
+    # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
+
+    def extraer_precios_energia(self) -> None:
+        """
+        Formato Cox (fitz, página 2):
+          "P3 2.959,00 kWh * 0,157235 €/kWh (31/07/2025 a 31/08/2025)"
+        P1/P2/P5 pueden no aparecer si su consumo es cero.
+        """
+        if not self.pdf_path:
+            return super().extraer_precios_energia()
+        try:
+            doc = fitz.open(self.pdf_path)
+            fitz_full = ""
+            for page in doc:
+                fitz_full += page.get_text() + "\n"
+            doc.close()
+
+            patron = re.compile(
+                r'P([1-6])\s+[\d.,]+\s*kWh\s*\*\s*'
+                r'(\d+[.,]\d+)\s*€/kWh',
+                re.IGNORECASE
+            )
+            for match in patron.finditer(fitz_full):
+                periodo = int(match.group(1))
+                precio  = float(norm(match.group(2)))
+                campo   = f"pe_p{periodo}"
+                if campo not in self.fields:
+                    self.fields[campo] = precio
+                    self.raw[campo]    = match.group(0)[:80]
+                    print(f"  ✅  {campo:<26} = {precio:<20} ← P{periodo} {precio} €/kWh")
+        except Exception as e:
+            print(f"  ⚠️  CoxParser.extraer_precios_energia — error con fitz: {e}")
+            super().extraer_precios_energia()

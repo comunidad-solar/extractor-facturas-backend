@@ -163,3 +163,39 @@ class ContigoParser(BaseParser):
                 pass
 
         return super().extraer_alquiler()
+
+    # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
+
+    def extraer_precios_energia(self) -> None:
+        """
+        Formato Contigo:
+          "P1. Energía activa  99,000 kWh  0,183657  18,18"
+          "P2. Energía activa  211,000 kWh  0,181612  38,32"
+        Sin "€/kWh" explícito — el precio es el 2º número (entre kWh y total).
+        """
+        for linha in self.linhas:
+            if "energía activa" not in linha.lower():
+                continue
+            if any(x in linha.lower()
+                   for x in ["peaje", "cargo", "importe", "bono", "financiaci"]):
+                continue
+
+            numeros = re.findall(r"[0-9]+[,\.][0-9]+", linha)
+            if len(numeros) < 3:
+                continue
+
+            try:
+                precio = float(norm(numeros[1]))
+                if not (0.01 <= precio <= 1.0):
+                    continue
+            except (ValueError, IndexError):
+                continue
+
+            m = re.search(r"\bP([1-6])\b", linha, re.IGNORECASE)
+            if m:
+                periodo = int(m.group(1))
+                campo   = f"pe_p{periodo}"
+                if campo not in self.fields:
+                    self.fields[campo] = precio
+                    self.raw[campo]    = linha[:80]
+                    print(f"  ✅  {campo:<26} = {precio:<20} ← P{periodo} {precio} €/kWh")
