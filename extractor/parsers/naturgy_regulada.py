@@ -1,11 +1,12 @@
 # extractor/parsers/naturgy_regulada.py
 # Parser para facturas de Comercializadora Regulada, Gas & Power, S.A. (Grupo Naturgy).
-# Sobrescribe 4 métodos porque el formato difiere del BaseParser:
+# Sobrescribe 5 métodos porque el formato difiere del BaseParser:
 #
 #   extraer_periodo():          fechas por extenso "8 de julio de 2025 a 3 de agosto de 2025"
 #   extraer_comercializadora(): captura "Comercializadora Regulada, Gas & Power, S.A."
 #   extraer_precios_potencia(): formato "X kW * Y €/kW y año * (N/365) días" → calcula Y/365
 #   extraer_iva():              "I.V.A." con puntos — "iva" not in "i.v.a." en BaseParser
+#   extraer_precios_energia():  corta texto antes de sección excedente bono social (duplicados)
 #
 # Modificado: 2026-02-27 | Rodrigo Costa
 #   - extraer_precios_potencia(): \s+ → \s* en filtro y regex para texto concatenado sin espacios
@@ -151,3 +152,37 @@ class NaturgyReguladaParser(BaseParser):
                 return m.group(1)
 
         return super().extraer_iva()
+
+    # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
+
+    def extraer_precios_energia(self) -> None:
+        """
+        Fatura PVPC — formato das linhas de energia:
+          "P1 (punta): 110 kWh * 0,092539 €/kWh"
+          "P2 (llano): 108 kWh * 0,028201 €/kWh"
+          "P3 (valle): 121 kWh * 0,002994 €/kWh"
+        Captura diretamente com regex próprio antes de qualquer corte.
+        Mapeia punta→p1, llano→p2, valle→p3.
+        """
+        patron = re.compile(
+            r'P([1-3])\s*\(\s*(punta|llano|valle)\s*\)\s*:\s*'
+            r'[\d\.,]+\s*kWh\s*\*?\s*([0-9]+[,\.][0-9]+)\s*€/kWh',
+            re.IGNORECASE
+        )
+
+        corte = re.search(r"excede\s+el\s+l[ií]mite", self.text, re.IGNORECASE)
+        texto = self.text[:corte.start()] if corte else self.text
+
+        encontrados = {}
+        for m in patron.finditer(texto):
+            periodo = int(m.group(1))
+            precio  = float(m.group(3).replace(",", "."))
+            key     = f"pe_p{periodo}"
+            if key not in encontrados:
+                encontrados[key] = precio
+                self.fields[key] = precio
+                self.raw[key]    = m.group(0)[:80]
+                print(f"  ✅  {key:<26} = {precio:<20} ← precio energía P{periodo} ({m.group(2)})")
+
+        if not encontrados:
+            super().extraer_precios_energia()
