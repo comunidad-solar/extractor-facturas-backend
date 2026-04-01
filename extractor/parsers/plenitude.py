@@ -103,21 +103,26 @@ class PlenitudeParser(BaseParser):
     def extraer_precios_energia(self) -> None:
         """
         Formato Plenitude (OCR):
-          "Consumo Fácil (29/07/2025 - 27/08/2025): 102,0000 kWh * 0,108981 €/kWh"
-        Precio único — guardar solo en pe_p1.
-        Captura el número inmediatamente anterior a "€/kWh" (precio unitario),
-        no el primero de la línea (que es la cantidad kWh).
+          "Consumo Fácil (...): 102,0000 kWh * 0,108981 €/kWh"
+        OCR pode ler "€/kWh" como "€E/xWh", "€/KWh", "e/kwh", etc.
+        Estratégia: capturar o número após "*" na linha "Consumo Fácil",
+        que é sempre o preço unitário (o número antes da unidade corrompida).
         """
-        patron_unico = re.compile(
-            r'Consumo\s+F[aá]cil[^\n]*?(\d+[.,]\d+)\s*€/kWh',
-            re.IGNORECASE
-        )
-        m = patron_unico.search(self.text)
-        if m:
-            precio = float(norm(m.group(1)))
-            self.fields["pe_p1"] = precio
-            self.raw["pe_p1"]    = m.group(0)[:80]
-            print(f"  ✅  {'pe_p1':<26} = {precio:<20} ← Consumo Fácil (precio único)")
-            return
+        for linha in self.linhas:
+            if not re.search(r'consumo\s+f[aá]cil', linha, re.IGNORECASE):
+                continue
+
+            # Capturar último número após "*" — é sempre o preço unitário
+            # "102,0000 kWh * 0,108981 €E/xWh"  →  grupo = "0,108981"
+            m = re.search(
+                r'\*\s*([0-9]+[,\.][0-9]+)\s*[€eE€]',
+                linha, re.IGNORECASE
+            )
+            if m:
+                precio = float(norm(m.group(1)))
+                self.fields["pe_p1"] = precio
+                self.raw["pe_p1"]    = linha[:80]
+                print(f"  ✅  {'pe_p1':<26} = {precio:<20} ← Consumo Fácil (precio único)")
+                return
 
         super().extraer_precios_energia()
