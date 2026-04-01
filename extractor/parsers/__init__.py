@@ -43,7 +43,7 @@ def get_parser(nombre: str, text: str, pdf_path: str = ""):
     Si el nombre no está en el registro, usa GenericParser.
     """
     cls = REGISTRY.get(nombre, GenericParser)
-    # Solo CoxParser acepta pdf_path — los demás solo reciben text
-    if cls is CoxParser:
+    # CoxParser y NaturgyParser aceptan pdf_path — los demás solo reciben text
+    if cls in (CoxParser, NaturgyParser):
         return cls(text, pdf_path)
     return cls(text)
