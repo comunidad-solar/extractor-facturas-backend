@@ -97,3 +97,25 @@ class PlenitudeParser(BaseParser):
                 return norm(m.group(1))
 
         return super().extraer_alquiler()
+
+    # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
+
+    def extraer_precios_energia(self) -> None:
+        """
+        Formato Plenitude (OCR):
+          "Consumo Fácil (29/07/2025 - 27/08/2025): 102,0000 kWh * 0,108981 €/kWh"
+        Precio único — guardar solo en pe_p1.
+        """
+        patron_unico = re.compile(
+            r'Consumo\s+F[aá]cil.*?(\d+[.,]\d+)\s*€/kWh',
+            re.IGNORECASE | re.DOTALL
+        )
+        m = patron_unico.search(self.text)
+        if m:
+            precio = float(norm(m.group(1)))
+            self.fields["pe_p1"] = precio
+            self.raw["pe_p1"]    = m.group(0)[:80]
+            print(f"  ✅  {'pe_p1':<26} = {precio:<20} ← Consumo Fácil (precio único)")
+            return
+
+        super().extraer_precios_energia()
