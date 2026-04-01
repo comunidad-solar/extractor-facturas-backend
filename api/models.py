@@ -20,6 +20,12 @@ class ExtractionResponse(BaseModel):
     pp_p4:              Optional[float] = None  # ex: CoxParser (3.0TD)
     pp_p5:              Optional[float] = None  # ex: CoxParser (3.0TD)
     pp_p6:              Optional[float] = None  # ex: CoxParser (3.0TD)
+    pe_p1:              Optional[float] = None  # precio energía P1 (€/kWh)
+    pe_p2:              Optional[float] = None  # precio energía P2 (€/kWh)
+    pe_p3:              Optional[float] = None  # precio energía P3 (€/kWh)
+    pe_p4:              Optional[float] = None  # precio energía P4 (€/kWh)
+    pe_p5:              Optional[float] = None  # precio energía P5 (€/kWh)
+    pe_p6:              Optional[float] = None  # precio energía P6 (€/kWh)
     imp_ele:            Optional[float] = None
     iva:                Optional[int]   = None
     alq_eq_dia:         Optional[float] = None

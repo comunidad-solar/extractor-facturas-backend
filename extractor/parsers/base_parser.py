@@ -74,6 +74,8 @@ class BaseParser:
         self.save("alq_eq_dia", alq, self.raw.get("alq_eq_dia", ""))
         log("alq_eq_dia", alq, self.raw.get("alq_eq_dia") or "no encontrado en PDF")
 
+        self.extraer_precios_energia()
+
         return self.fields, self.raw
 
     # ── CUPS ─────────────────────────────────────────────────────────────────
@@ -380,6 +382,69 @@ class BaseParser:
                         pass
 
         return None
+
+    # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
+
+    def extraer_precios_energia(self) -> None:
+        """
+        Extrae pe_p1..pe_p6 (€/kWh) de la sección de energía.
+        Prueba 4 patrones en orden de prioridad; usa el primero que encuentre resultados.
+        """
+        precios: dict[int, float] = {}
+
+        # Patrón 1 — Precio único: "Precio Energía 0,114009 €/kWh"
+        m = re.search(
+            r'[Pp]recio\s+[Ee]nerg[ií]a[\s:]+(\d+[.,]\d+)\s*€?/kWh',
+            self.text
+        )
+        if m:
+            val = float(m.group(1).replace(",", "."))
+            if val >= 0.01:
+                precios[1] = val
+                self.fields["pe_p1"] = val
+                self.raw["pe_p1"] = m.group(0)[:80]
+
+        # Patrón 2 — Por período: "P1  0,128456 €/kWh"
+        if not precios:
+            for m2 in re.finditer(r'[Pp](\d)\s+(\d+[.,]\d+)\s*€?/kWh', self.text):
+                periodo = int(m2.group(1))
+                val = float(m2.group(2).replace(",", "."))
+                if 1 <= periodo <= 6 and val >= 0.01:
+                    precios[periodo] = val
+                    self.fields[f"pe_p{periodo}"] = val
+                    self.raw[f"pe_p{periodo}"] = m2.group(0)[:80]
+
+        # Patrón 3 — Tabla "Energía P1  58 kWh  0,128456 €/kWh  7,45 €"
+        if not precios:
+            for m3 in re.finditer(
+                r'[Ee]nerg[ií]a\s+P(\d).*?(\d+[.,]\d{4,6})\s*€?/kWh',
+                self.text
+            ):
+                periodo = int(m3.group(1))
+                val = float(m3.group(2).replace(",", "."))
+                if 1 <= periodo <= 6 and val >= 0.01:
+                    precios[periodo] = val
+                    self.fields[f"pe_p{periodo}"] = val
+                    self.raw[f"pe_p{periodo}"] = m3.group(0)[:80]
+
+        # Patrón 4 — Fallback: todos los €/kWh en el texto, asignar secuencialmente
+        if not precios:
+            encontrados = []
+            for m4 in re.finditer(r'(\d+[.,]\d{4,6})\s*€/kWh', self.text):
+                val = float(m4.group(1).replace(",", "."))
+                if val >= 0.01:
+                    encontrados.append((val, m4.group(0)[:80]))
+            for i, (val, src) in enumerate(encontrados[:6], start=1):
+                precios[i] = val
+                self.fields[f"pe_p{i}"] = val
+                self.raw[f"pe_p{i}"] = src
+
+        # Log de resultados
+        for i in range(1, 7):
+            key = f"pe_p{i}"
+            val = self.fields.get(key)
+            if val is not None:
+                print(f"  ✅  {key:<26} = {val:<20} ← precio energía P{i}")
 
     def _calcular_dias(self) -> int:
         """Calcula los días del período a partir de periodo_inicio y periodo_fin ya guardados."""
