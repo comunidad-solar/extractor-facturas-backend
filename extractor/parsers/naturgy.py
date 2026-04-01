@@ -18,51 +18,179 @@ import re
 from .base_parser import BaseParser
 from ..base import norm
 
+try:
+    import fitz  # PyMuPDF
+    _FITZ_OK = True
+except ImportError:
+    _FITZ_OK = False
+
+
+def _desspacar(linha: str) -> str:
+    """
+    Colapsa caracteres separados por espaços simples produzidos pelo pdfplumber
+    ao extrair a coluna direita de tabelas Naturgy.
+    Exemplo: 'C o n s u m o' → 'Consumo'
+             '0 ,.1 3 2 3 2 8' → '0,132328'
+    Estratégia:
+      1. Normalizar ',.N' ou ', .N' (artefacto decimal) → ',N'
+      2. Se a linha parece "espaçada" (maioria dos tokens tem 1 char) → colapsar.
+    """
+    # Artefacto: vírgula+ponto antes de dígito  →  só vírgula
+    s = re.sub(r',\s*\.\s*(?=\d)', ',', linha)
+    tokens = s.split(' ')
+    if len(tokens) < 4:
+        return s
+    single = sum(1 for t in tokens if len(t) == 1)
+    if single / len(tokens) >= 0.55:
+        s = ''.join(tokens)
+        # Restaurar espaços antes de unidades e palavras-chave comuns
+        s = re.sub(r'(\d)(kWh|kW|€|días?|día)', r'\1 \2', s, flags=re.IGNORECASE)
+        s = re.sub(r'(kWh|kW|€|días?|día)(\w)', r'\1 \2', s, flags=re.IGNORECASE)
+    return s
+
+
+def _normalizar_espaçado(s: str) -> str:
+    """
+    Remove espaços entre caracteres individuais numa substring espaçada.
+    '0 ,.1 3 2 3 2 8' → '0,132328'
+    'C o n s u m o' → 'Consumo'
+    """
+    # Normalizar ',.' → ','
+    s = re.sub(r',\s*\.\s*(?=\d)', ',', s)
+    # Colapsar tokens de 1 char separados por espaço
+    tokens = s.split(' ')
+    resultado = []
+    buffer = []
+    for t in tokens:
+        if len(t) <= 2:
+            buffer.append(t)
+        else:
+            if buffer:
+                resultado.append(''.join(buffer))
+                buffer = []
+            resultado.append(t)
+    if buffer:
+        resultado.append(''.join(buffer))
+    return ' '.join(resultado)
+
 
 def _limpiar(linha: str) -> str:
     """
-    Elimina todos los puntos de una línea y colapsa los espacios resultantes.
+    Elimina los separadores de puntos de Naturgy (secuencias de 2+
+    puntos), pero preserva los puntos decimales (punto entre dígitos).
+    Colapsa los espacios resultantes.
     Convierte "...T...é....r..m...i.n...o..." en "Término".
     """
-    s = re.sub(r'\.+', '', linha)
+    # Eliminar secuencias de 2 o más puntos
+    s = re.sub(r'\.{2,}', ' ', linha)
+    # Eliminar puntos aislados que NO estén entre dígitos
+    # (preserva "0.151404" pero elimina " . " o "P1.")
+    s = re.sub(r'(?<!\d)\.(?!\d)', ' ', s)
     s = re.sub(r'\s+', ' ', s).strip()
     return s
 
 
 class NaturgyParser(BaseParser):
 
-    def __init__(self, text: str):
+    def __init__(self, text: str, pdf_path: str = None):
         super().__init__(text)
+        self.pdf_path      = pdf_path
+        # Guardar texto original antes de cualquier preprocesado (pontos decimais intactos)
+        self.text_original = text
         # Pre-procesar todas las líneas eliminando los puntos separadores
-        self.linhas_clean = [_limpiar(l) for l in self.linhas]
+        self.linhas_clean  = [_desspacar(_limpiar(l)) for l in self.linhas]
+        self._fitz_text    = None  # lazy — só extraído se necessário
+
+    def _texto_fitz(self) -> str:
+        """
+        Extrai texto completo do PDF usando PyMuPDF (fitz),
+        que lida melhor com tabelas de 2 colunas.
+        Requer que self.pdf_path esteja definido.
+        """
+        if not _FITZ_OK or not getattr(self, 'pdf_path', None):
+            return ""
+        try:
+            doc  = fitz.open(self.pdf_path)
+            text = "\n".join(str(page.get_text()) for page in doc)
+            doc.close()
+            return text
+        except Exception:
+            return ""
+
+    def _get_fitz_text(self) -> str:
+        if self._fitz_text is None:
+            self._fitz_text = self._texto_fitz()
+        return self._fitz_text
 
     def extraer_precios_potencia(self):
         """
         Naturgy: "Término de potencia P1 (2,300 kW) 28 días 0,077976€/kW día 5,03€"
-        Usa las líneas limpias (sin puntos separadores).
+        Soporta P1..P6 (3.0TD). Usa las líneas limpias (sin puntos separadores).
         """
-        pp1 = pp2 = None
-        src1 = src2 = ""
+        resultados = {}  # período (int) → precio (str)
 
-        for linha in self.linhas_clean:
+        patron_periodo = re.compile(r'P([1-6])', re.IGNORECASE)
+        patron_precio  = re.compile(
+            r"\([0-9,\.]+\s*kW\)\s*[0-9]+\s*d[ií]as?\s*([0-9]+[,\.][0-9]+)\s*€/kW",
+            re.IGNORECASE
+        )
+        # Mapeo de palabras clave → período (facturas 2.0TD sin P1/P2 explícito)
+        kw_periodo = {"punta": 1, "llano": 2, "valle": 3}
+
+        # ── Prioridade 1: fitz (mais fiável para tabelas de 2 colunas) ──────────
+        fitz_text = self._get_fitz_text()
+        if fitz_text:
+            patron_fitz = re.compile(
+                r'[Tt]érmino de potencia P([1-6])\s*\([0-9,\.]+\s*kW\)\s*'
+                r'([0-9]+)\s*d[ií]as?\s*([0-9,\.]+)\s*€/kW',
+                re.IGNORECASE
+            )
+            for m in patron_fitz.finditer(fitz_text):
+                periodo = int(m.group(1))
+                precio  = norm(m.group(3))
+                if precio and periodo not in resultados:
+                    resultados[periodo] = precio
+                    self.raw[f"pp_p{periodo}"] = m.group(0)[:80]
+                    print(f"  ✅  pp_p{periodo:<22} = {precio:<20} ← Naturgy fitz P{periodo}")
+
+        # ── Prioridade 2: pdfplumber (complementa o que fitz não encontrou) ────
+        for linha_orig in self.linhas:
+            linha = _normalizar_espaçado(linha_orig)
+            linha = re.sub(r',\.', ',', linha)
             l = linha.lower()
             if "término de potencia" not in l and "termino de potencia" not in l:
                 continue
 
-            # "(X,XXX kW) N días Y,YYYYYY€/kW día"
-            m = re.search(
-                r"\([0-9,\.]+\s*kW\)\s*([0-9]+)\s*d[ií]as?\s*([0-9]+[,\.][0-9]+)\s*€/kW",
-                linha, re.IGNORECASE
-            )
-            if m:
-                precio = norm(m.group(2))
-                if "p1" in l or "punta" in l:
-                    pp1, src1 = precio, linha[:80]
-                elif "p2" in l or "llano" in l or "valle" in l:
-                    pp2, src2 = precio, linha[:80]
+            m_precio = patron_precio.search(linha)
+            if not m_precio:
+                continue
 
-        self.raw["pp_p1"] = src1
-        self.raw["pp_p2"] = src2
+            precio = norm(m_precio.group(1))
+
+            # Intentar capturar Pn explícito
+            m_per = patron_periodo.search(linha)
+            if m_per:
+                per = int(m_per.group(1))
+            else:
+                per = next((v for k, v in kw_periodo.items() if k in l), None)
+
+            # Só guardar se fitz ainda não preencheu este período
+            if per is not None and per not in resultados:
+                resultados[per] = precio
+                self.raw[f"pp_p{per}"] = linha[:80]
+
+        # Devolver pp_p1 y pp_p2 para compatibilidad con BaseParser
+        pp1 = resultados.get(1)
+        pp2 = resultados.get(2)
+
+        # Escribir P3..P6 directamente en self.fields
+        for per, precio in resultados.items():
+            if per >= 3:
+                try:
+                    self.fields[f"pp_p{per}"] = float(precio)
+                except (TypeError, ValueError):
+                    pass
+
         return pp1, pp2
 
     def extraer_imp_ele(self):
@@ -134,19 +262,77 @@ class NaturgyParser(BaseParser):
 
     def extraer_precios_energia(self) -> None:
         """
-        Naturgy usa as linhas limpias (sem pontos separadores).
-        Dois casos:
-          A) Preço único — "Período de DD.MM.YYYY a DD.MM.YYYY  X kWh  Y€/kWh"
-             → guardar só pe_p1 com a média ponderada dos sub-períodos
-          B) Preços por período P1/P2/P3 — delegar ao BaseParser
-             mas usando linhas limpas
+        Naturgy — três casos tratados por ordem de prioridade:
+
+        1) 3.0TD — "Consumo electricidad P1  0 kWh  0,151404€/kWh  0,00€"
+           Usa self.text_original (com pontos decimais intactos).
+           Captura todos os períodos P1..P6 mesmo com consumo zero.
+
+        2) Preço único por sub-períodos — "Período de DD.MM.YYYY a DD.MM.YYYY  X kWh  Y€/kWh"
+           Usa linhas limpas; calcula média ponderada → pe_p1.
+
+        3) Fallback ao BaseParser com text_original (evita que pontos removidos
+           destruam decimais dos preços).
         """
+        # ── Padrão 1: 3.0TD com "Consumo electricidad P1..P6" ────────────────
+        # Usa linhas originais normalizadas (lida com texto misto + chars espaçados)
+        patron_3td = re.compile(
+            r'Consumo\s*electricidad\s*P([1-6])\s*([\d,\.]+)\s*kWh\s*([\d,\.]+)\s*€/kWh',
+            re.IGNORECASE
+        )
+        for linha_orig in self.linhas:
+            linha_norm = _normalizar_espaçado(linha_orig)
+            linha_norm = re.sub(r',\.', ',', linha_norm)
+            m = patron_3td.search(linha_norm)
+            if m:
+                periodo = int(m.group(1))
+                val = norm(m.group(3))
+                if val is None:
+                    continue
+                try:
+                    precio = float(val)
+                    campo = f"pe_p{periodo}"
+                    if self.fields.get(campo) is None:
+                        self.fields[campo] = precio
+                        self.raw[campo] = linha_norm[:80]
+                        print(f"  ✅  {campo:<26} = {precio:<20} ← Naturgy 3.0TD P{periodo}")
+                except ValueError:
+                    pass
+
+        # Se encontrou menos de 2 períodos, tentar via fitz
+        achados = sum(1 for n in range(1, 7) if self.fields.get(f"pe_p{n}") is not None)
+        if achados < 2:
+            fitz_text = self._get_fitz_text()
+            if fitz_text:
+                patron_fitz = re.compile(
+                    r'Consumo electricidad P([1-6])\s+([\d,\.]+)\s*kWh\s+([\d,\.]+)\s*€/kWh',
+                    re.IGNORECASE
+                )
+                for m in patron_fitz.finditer(fitz_text):
+                    periodo = int(m.group(1))
+                    val = norm(m.group(3))
+                    if val is None:
+                        continue
+                    try:
+                        precio = float(val)
+                        campo = f"pe_p{periodo}"
+                        if self.fields.get(campo) is None:
+                            self.fields[campo] = precio
+                            self.raw[campo]    = m.group(0)[:80]
+                            print(f"  ✅  {campo:<26} = {precio:<20} ← Naturgy fitz P{periodo}")
+                    except ValueError:
+                        pass
+
+        achou = any(self.fields.get(f"pe_p{n}") is not None for n in range(1, 7))
+        if achou:
+            return
+
+        # ── Padrão 2: preço único por sub-períodos ────────────────────────────
         patron_subperiodo = re.compile(
             r'Per[ií]odo\s+de\s+[\d\.]+\s+a\s+[\d\.]+\s+'
             r'([\d\.]+)\s*kWh\s+([0-9]+[,\.][0-9]+)\s*€/kWh',
             re.IGNORECASE
         )
-
         kwh_total   = 0.0
         valor_total = 0.0
         encontrou   = False
@@ -170,10 +356,10 @@ class NaturgyParser(BaseParser):
             print(f"  ✅  {'pe_p1':<26} = {media:<20} ← precio energía único (media ponderada)")
             return
 
-        # Fallback: delegar ao BaseParser usando linhas limpas
-        linhas_originais = self.linhas
-        self.linhas = self.linhas_clean
+        # ── Fallback: BaseParser com texto original (pontos decimais intactos) ─
+        texto_backup = self.text
+        self.text = self.text_original
         try:
             super().extraer_precios_energia()
         finally:
-            self.linhas = linhas_originais
+            self.text = texto_backup
