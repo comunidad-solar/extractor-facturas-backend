@@ -70,3 +70,28 @@ class EnergyaVMParser(BaseParser):
         self.raw["pp_p1"] = src1
         self.raw["pp_p2"] = src2
         return pp1, pp2
+
+    # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
+
+    def extraer_precios_energia(self) -> None:
+        """
+        Formato EnergyaVM:
+          "Término de energía P1: 12,82 kWh, Precio: 0,104900 €/kWh."
+          "P2: 17,65 kWh, Precio: 0,104900 €/kWh."   ← línea de continuación
+          "P3: 31,87 kWh, Precio: 0,104900 €/kWh."
+        Las líneas P2/P3 no tienen "Término de energía" — son continuaciones.
+        """
+        patron = re.compile(
+            r'(?:T[eé]rmino\s+de\s+energ[ií]a\s+)?'
+            r'P([1-6])\s*:\s*[\d.,]+\s*kWh\s*,\s*'
+            r'Precio\s*:\s*(\d+[.,]\d+)\s*€/kWh',
+            re.IGNORECASE
+        )
+        for match in patron.finditer(self.text):
+            periodo = int(match.group(1))
+            precio  = float(norm(match.group(2)))
+            campo   = f"pe_p{periodo}"
+            if campo not in self.fields:
+                self.fields[campo] = precio
+                self.raw[campo]    = match.group(0)[:80]
+                print(f"  ✅  {campo:<26} = {precio:<20} ← P{periodo} {precio} €/kWh")
