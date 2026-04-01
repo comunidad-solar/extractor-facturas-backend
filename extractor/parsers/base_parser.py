@@ -76,6 +76,10 @@ class BaseParser:
 
         self.extraer_precios_energia()
 
+        importe = self.extraer_importe_factura()
+        self.fields["importe_factura"] = float(importe) if importe else None
+        log("importe_factura", self.fields["importe_factura"], self.raw.get("importe_factura", ""))
+
         return self.fields, self.raw
 
     # ── CUPS ─────────────────────────────────────────────────────────────────
@@ -445,6 +449,45 @@ class BaseParser:
             val = self.fields.get(key)
             if val is not None:
                 print(f"  ✅  {key:<26} = {val:<20} ← precio energía P{i}")
+
+    # ── IMPORTE TOTAL DE LA FACTURA ───────────────────────────────────────────
+
+    def extraer_importe_factura(self) -> Optional[str]:
+        """
+        Captura el importe total de la factura.
+        Soporta separadores de miles con punto: "2.738,15 €"
+        Patrones por orden de prioridad:
+          1. "TOTAL IMPORTE FACTURA ... X.XXX,XX €"
+          2. "TOTAL ... X,XX €"
+          3. "Total a pagar ... X,XX €"
+          4. "IMPORTE FACTURA: X,XX €"
+        Acepta valores entre 1 € y 99999 €.
+        """
+        def parse_importe(texto: str) -> Optional[float]:
+            # Eliminar puntos separadores de miles: "2.738,15" → "2738,15"
+            limpio = re.sub(r'\.(?=\d{3}[,\d])', '', texto)
+            try:
+                val = float(norm(limpio))
+                if 1.0 <= val <= 99999.0:
+                    return val
+            except (ValueError, TypeError):
+                pass
+            return None
+
+        patrones = [
+            r'TOTAL\s+IMPORTE\s+FACTURA[^\d]*([0-9]+(?:\.[0-9]{3})*[,\.][0-9]+)\s*€',
+            r'TOTAL[^\d\n]{0,30}([0-9]+(?:\.[0-9]{3})*[,\.][0-9]+)\s*€',
+            r'Total\s+a\s+pagar[^\d\n]{0,20}([0-9]+(?:\.[0-9]{3})*[,\.][0-9]+)\s*[€e]',
+            r'IMPORTE\s+FACTURA\s*:[^\d\n]{0,10}([0-9]+(?:\.[0-9]{3})*[,\.][0-9]+)\s*€',
+        ]
+        for patron in patrones:
+            m = re.search(patron, self.text, re.IGNORECASE)
+            if m:
+                val = parse_importe(m.group(1))
+                if val is not None:
+                    self.raw["importe_factura"] = m.group(0)[:80]
+                    return str(val)
+        return None
 
     def _calcular_dias(self) -> int:
         """Calcula los días del período a partir de periodo_inicio y periodo_fin ya guardados."""
