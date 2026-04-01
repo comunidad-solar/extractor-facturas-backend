@@ -10,6 +10,7 @@
 #   - pp_p1/p2: "Término de potencia P1 (2,300 kW) 28 días 0,077976€/kW día"
 #   - alq_eq_dia: "Alquiler de contador 28 días 0,026429€/día"
 #   - Ignorar líneas del gráfico de tarta con porcentajes (9,49%, 0,84%, etc.)
+#   - extraer_precios_energia(): precio único por sub-períodos → media ponderada → pe_p1
 #
 # Modificado: 2026-02-26 | Rodrigo Costa
 
@@ -128,3 +129,51 @@ class NaturgyParser(BaseParser):
                 return norm(m.group(2))
 
         return None
+
+    # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
+
+    def extraer_precios_energia(self) -> None:
+        """
+        Naturgy usa as linhas limpias (sem pontos separadores).
+        Dois casos:
+          A) Preço único — "Período de DD.MM.YYYY a DD.MM.YYYY  X kWh  Y€/kWh"
+             → guardar só pe_p1 com a média ponderada dos sub-períodos
+          B) Preços por período P1/P2/P3 — delegar ao BaseParser
+             mas usando linhas limpas
+        """
+        patron_subperiodo = re.compile(
+            r'Per[ií]odo\s+de\s+[\d\.]+\s+a\s+[\d\.]+\s+'
+            r'([\d\.]+)\s*kWh\s+([0-9]+[,\.][0-9]+)\s*€/kWh',
+            re.IGNORECASE
+        )
+
+        kwh_total   = 0.0
+        valor_total = 0.0
+        encontrou   = False
+
+        for linha in self.linhas_clean:
+            m = patron_subperiodo.search(linha)
+            if m:
+                try:
+                    kwh   = float(norm(m.group(1)))
+                    preco = float(norm(m.group(2)))
+                    kwh_total   += kwh
+                    valor_total += kwh * preco
+                    encontrou    = True
+                    self.raw["pe_p1"] = linha[:80]
+                except ValueError:
+                    pass
+
+        if encontrou and kwh_total > 0:
+            media = round(valor_total / kwh_total, 6)
+            self.fields["pe_p1"] = media
+            print(f"  ✅  {'pe_p1':<26} = {media:<20} ← precio energía único (media ponderada)")
+            return
+
+        # Fallback: delegar ao BaseParser usando linhas limpas
+        linhas_originais = self.linhas
+        self.linhas = self.linhas_clean
+        try:
+            super().extraer_precios_energia()
+        finally:
+            self.linhas = linhas_originais
