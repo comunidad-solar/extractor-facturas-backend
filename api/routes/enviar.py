@@ -2,11 +2,15 @@
 # Proxy para Zoho Flow.
 # POST /enviar — reenvía {cliente, factura, ...} al webhook de Zoho Flow (JSON)
 
+import asyncio
 import json
+import os
 
 import httpx
 from fastapi import APIRouter, Form, HTTPException
 from typing import Any, Dict
+
+from api.zoho_crm import buscar_deal_por_email, buscar_mpklog_por_email
 
 ZOHO_WEBHOOK = (
     "https://flow.zoho.eu/20067915739/flow/webhook/incoming"
@@ -53,4 +57,26 @@ async def enviar_datos(
 
     print(f"[/enviar] Zoho respondió: {resp.status_code}")
 
-    return {"ok": True}
+    # Aguardar o Flow criar o deal (assíncrono — não bloqueante)
+    delay = int(os.getenv("ZOHO_DEAL_FETCH_DELAY", "4"))
+    await asyncio.sleep(delay)
+
+    # Buscar dealId e mpklogId em paralelo
+    correo = parsed.get("cliente", {}).get("correo", "")
+    deal_id = None
+    mpklog_id = None
+    if correo:
+        deal_id, mpklog_id = await asyncio.gather(
+            buscar_deal_por_email(correo),
+            buscar_mpklog_por_email(correo),
+        )
+        if deal_id:
+            print(f"  ✅  dealId recuperado: {deal_id} ({correo})")
+        else:
+            print(f"  ⚠️  dealId não encontrado para: {correo}")
+        if mpklog_id:
+            print(f"  ✅  mpklogId recuperado: {mpklog_id} ({correo})")
+        else:
+            print(f"  ⚠️  mpklogId não encontrado para: {correo}")
+
+    return {"ok": True, "dealId": deal_id, "mpklogId": mpklog_id}
