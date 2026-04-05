@@ -8,9 +8,10 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes.facturas import router as facturas_router
-from api.routes.cups    import router as cups_router
-from api.routes.enviar  import router as enviar_router
+from api.routes.facturas  import router as facturas_router
+from api.routes.cups      import router as cups_router
+from api.routes.enviar    import router as enviar_router
+from api.routes.contrato  import router as contrato_router
 
 app = FastAPI(
     title="Extractor Facturas Luz",
@@ -31,6 +32,7 @@ app.add_middleware(
 app.include_router(facturas_router)
 app.include_router(cups_router)
 app.include_router(enviar_router)
+app.include_router(contrato_router)
 
 
 @app.get("/")
