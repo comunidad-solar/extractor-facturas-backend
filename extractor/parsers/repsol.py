@@ -9,11 +9,40 @@
 # Modificado: 2026-02-26 | Rodrigo Costa
 
 import re
+from typing import Optional
 from .base_parser import BaseParser
 from ..base import norm
 
 
 class RepsolParser(BaseParser):
-    pass
-    # Actualmente el BaseParser cubre todos los casos de Repsol.
-    # Este archivo existe para facilitar añadir casos especiales en el futuro.
+
+    def extraer_alquiler(self) -> Optional[str]:
+        """
+        Formato Repsol: "Equipos de medida  0,77 €" ou "0,83 €"
+        Buscar especificamente a linha "Equipos de medida" para evitar
+        capturar o total de "Otros conceptos".
+        Divide pelo número de dias para obter €/día.
+        """
+        dias = self._calcular_dias()
+
+        for linha in self.linhas:
+            if "equipos de medida" not in linha.lower():
+                continue
+
+            m = re.search(
+                r"([0-9]+[,\.][0-9]+)\s*€",
+                linha, re.IGNORECASE
+            )
+            if m:
+                try:
+                    normed = norm(m.group(1))
+                    if normed is None:
+                        continue
+                    total = float(normed)
+                    if 0.1 <= total <= 5.0 and dias > 0:
+                        self.raw["alq_eq_dia"] = f"{linha[:55]} [calculado: {total}/{dias}]"
+                        return str(round(total / dias, 6))
+                except ValueError:
+                    pass
+
+        return super().extraer_alquiler()
