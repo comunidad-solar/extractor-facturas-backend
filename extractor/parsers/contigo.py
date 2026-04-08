@@ -164,6 +164,34 @@ class ContigoParser(BaseParser):
 
         return super().extraer_alquiler()
 
+    # ── BONO SOCIAL ───────────────────────────────────────────────────────────
+
+    def extraer_bono_social(self) -> Optional[str]:
+        """
+        Formato Contigo: "Importe asociado a la financiación del bono social ... 30 días 0,006299 0,19"
+        O preço €/día é o penúltimo número da linha (o último é o total €).
+        """
+        for linha in self.linhas:
+            if "bono social" not in linha.lower():
+                continue
+
+            numeros = re.findall(r"[0-9]+[,\.][0-9]+", linha)
+            if len(numeros) < 2:
+                continue
+
+            try:
+                normed = norm(numeros[-2])
+                if normed is None:
+                    continue
+                precio = float(normed)
+                if 0.001 <= precio <= 0.5:
+                    self.raw["bono_social"] = linha[:80]
+                    return normed
+            except (ValueError, TypeError):
+                pass
+
+        return super().extraer_bono_social()
+
     # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
 
     def extraer_precios_energia(self) -> None:

@@ -15,6 +15,7 @@
 # Modificado: 2026-02-26 | Rodrigo Costa
 
 import re
+from typing import Optional
 from .base_parser import BaseParser
 from ..base import norm
 
@@ -257,6 +258,52 @@ class NaturgyParser(BaseParser):
                 return norm(m.group(2))
 
         return None
+
+    # ── BONO SOCIAL ───────────────────────────────────────────────────────────
+
+    def extraer_bono_social(self) -> Optional[str]:
+        """
+        Naturgy: "Financiación del Bono Social 28 días 0,006282€/día 0,18€"
+        pdfplumber não extrai esta linha — usar fitz como fonte primária.
+        """
+        def _buscar(linhas):
+            for linha in linhas:
+                l = linha.lower()
+                if "bono social" not in l:
+                    continue
+                # Padrão 1 — €/día explícito
+                m = re.search(
+                    r"([0-9]+[,\.][0-9]+)\s*€/d[ií]a",
+                    linha, re.IGNORECASE
+                )
+                if m:
+                    self.raw["bono_social"] = linha[:80]
+                    return norm(m.group(1))
+                # Padrão 2 — dividir total pelos dias
+                m = re.search(r"([0-9]+[,\.][0-9]+)\s*€", linha, re.IGNORECASE)
+                if m:
+                    try:
+                        dias = self._calcular_dias()
+                        normed = norm(m.group(1))
+                        if normed is None:
+                            continue
+                        total = float(normed)
+                        if 0.01 <= total <= 10.0 and dias > 0:
+                            self.raw["bono_social"] = f"{linha[:55]} [calculado: {total}/{dias}]"
+                            return str(round(total / dias, 6))
+                    except ValueError:
+                        pass
+            return None
+
+        # Fonte primária: fitz
+        fitz_text = self._get_fitz_text()
+        if fitz_text:
+            result = _buscar(fitz_text.splitlines())
+            if result:
+                return result
+
+        # Fallback: linhas limpas e originais
+        return _buscar(self.linhas_clean) or _buscar(self.linhas)
 
     # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
 
