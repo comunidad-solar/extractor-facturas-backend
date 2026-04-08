@@ -74,6 +74,11 @@ class BaseParser:
         self.save("alq_eq_dia", alq, self.raw.get("alq_eq_dia", ""))
         log("alq_eq_dia", alq, self.raw.get("alq_eq_dia") or "no encontrado en PDF")
 
+        bono = self.extraer_bono_social()
+        self.fields["bono_social"] = bono
+        if bono:
+            print(f"  ✅  {'bono_social':<26} = {bono:<20} ← bono social €/día")
+
         self.extraer_precios_energia()
 
         importe = self.extraer_importe_factura()
@@ -384,6 +389,49 @@ class BaseParser:
                             return str(round(total / dias_facturados, 6))
                     except ValueError:
                         pass
+
+        return None
+
+    # ── BONO SOCIAL ───────────────────────────────────────────────────────────
+
+    def extraer_bono_social(self) -> Optional[str]:
+        """
+        Formato Repsol:
+          "Financiación Bono Social  0,37 €  29 días x 0,012742 €/día"
+        Captura o valor por día directamente da linha.
+        Fallback: divide o total pelos dias facturados.
+        """
+        for linha in self.linhas:
+            l = linha.lower()
+            if "bono social" not in l and "bono_social" not in l:
+                continue
+
+            # Padrão 1 — valor €/día explícito
+            m = re.search(
+                r"([0-9]+[,\.][0-9]+)\s*€/d[ií]a",
+                linha, re.IGNORECASE
+            )
+            if m:
+                self.raw["bono_social"] = linha[:80]
+                return norm(m.group(1))
+
+            # Padrão 2 — total € sem €/día → dividir pelos dias
+            m = re.search(
+                r"([0-9]+[,\.][0-9]+)\s*€",
+                linha, re.IGNORECASE
+            )
+            if m:
+                try:
+                    dias = self._calcular_dias()
+                    normed = norm(m.group(1))
+                    if normed is None:
+                        continue
+                    total = float(normed)
+                    if 0.01 <= total <= 10.0 and dias > 0:
+                        self.raw["bono_social"] = f"{linha[:55]} [calculado: {total}/{dias}]"
+                        return str(round(total / dias, 6))
+                except ValueError:
+                    pass
 
         return None
 

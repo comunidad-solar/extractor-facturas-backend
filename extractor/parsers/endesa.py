@@ -59,6 +59,60 @@ class EndesaParser(BaseParser):
         finally:
             self.linhas = linhas_originais
 
+    # ── PRECIOS DE POTENCIA ───────────────────────────────────────────────────
+
+    def extraer_precios_potencia(self):
+        """
+        Endesa: sub-períodos com preços diferentes para Punta e Valle.
+        Formato: "Pot. Punta 4,600 kW x 0,087879 Eur/kW x 14 días"
+        Calcula média ponderada pelos días para pp_p1 (Punta) e pp_p2 (Valle).
+        """
+        corte = re.search(
+            r"FACTURA\s+ENDESA\s+X|ENDESA\s+X\s+SERVICIOS",
+            self.text, re.IGNORECASE
+        )
+        texto = self.text[:corte.start()] if corte else self.text
+
+        patron = re.compile(
+            r'Pot\.\s*(Punta|Valle)\s+'
+            r'[0-9,\.]+\s*kW\s*[xX×]\s*([0-9]+[,\.][0-9]+)\s*Eur/kW\s*[xX×]\s*([0-9]+)\s*d[ií]as?',
+            re.IGNORECASE
+        )
+
+        acumulado = {"punta": {"dias": 0.0, "valor": 0.0, "raw": ""},
+                     "valle": {"dias": 0.0, "valor": 0.0, "raw": ""}}
+
+        for m in patron.finditer(texto):
+            label = m.group(1).lower()
+            try:
+                normed = norm(m.group(2))
+                if normed is None:
+                    continue
+                precio = float(normed)
+                dias   = float(m.group(3))
+                acumulado[label]["valor"] += precio * dias
+                acumulado[label]["dias"]  += dias
+                acumulado[label]["raw"]    = m.group(0)[:80]
+            except (ValueError, TypeError):
+                pass
+
+        mapa = {"punta": "pp_p1", "valle": "pp_p2"}
+        encontrou = False
+
+        for label, campo in mapa.items():
+            acc = acumulado[label]
+            if acc["dias"] > 0:
+                media = round(acc["valor"] / acc["dias"], 6)
+                self.fields[campo] = media
+                self.raw[campo]    = acc["raw"]
+                print(f"  ✅  {campo:<26} = {media:<20} ← Endesa potencia {label} (média ponderada)")
+                encontrou = True
+
+        if not encontrou:
+            return super().extraer_precios_potencia()
+
+        return self.fields.get("pp_p1"), self.fields.get("pp_p2")
+
     # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
 
     def extraer_precios_energia(self):
