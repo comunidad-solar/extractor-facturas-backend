@@ -10,10 +10,56 @@
 # Modificado: 2026-02-26 | Rodrigo Costa
 
 import re
+from typing import Optional
 from .base_parser import BaseParser
+from ..base import norm
 
 
 class OctopusParser(BaseParser):
+
+    # ── ALQUILER ──────────────────────────────────────────────────────────────
+
+    def extraer_alquiler(self) -> Optional[str]:
+        """
+        Formato Octopus: "Alquiler de Equipos  29 días  0,027 €/día  0,77 €"
+        Captura o valor €/día explícito directamente.
+        """
+        for linha in self.linhas:
+            l = linha.lower()
+            if "alquiler" not in l and "equipo" not in l:
+                continue
+
+            m = re.search(
+                r"([0-9]+[,\.][0-9]+)\s*€/d[ií]a",
+                linha, re.IGNORECASE
+            )
+            if m:
+                self.raw["alq_eq_dia"] = linha[:80]
+                return norm(m.group(1))
+
+        return super().extraer_alquiler()
+
+    # ── BONO SOCIAL ───────────────────────────────────────────────────────────
+
+    def extraer_bono_social(self) -> Optional[str]:
+        """
+        Formato Octopus: "Bono Social  29 días  0,013 €/día  0,37 €"
+        Captura o valor €/día explícito directamente.
+        """
+        for linha in self.linhas:
+            l = linha.lower()
+            if "bono social" not in l and "bono_social" not in l:
+                continue
+
+            m = re.search(
+                r"([0-9]+[,\.][0-9]+)\s*€/d[ií]a",
+                linha, re.IGNORECASE
+            )
+            if m:
+                self.raw["bono_social"] = linha[:80]
+                return norm(m.group(1))
+
+        return super().extraer_bono_social()
 
     # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
 
