@@ -11,6 +11,7 @@ from fastapi import APIRouter, Form, HTTPException
 from typing import Any, Dict
 
 from api.zoho_crm import buscar_deal_por_email, buscar_mpklog_por_email
+from api.routes.sesion import crear_sesion
 
 ZOHO_WEBHOOK = (
     "https://flow.zoho.eu/20067915739/flow/webhook/incoming"
@@ -79,4 +80,8 @@ async def enviar_datos(
         else:
             print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
-    return {"ok": True, "dealId": deal_id, "mpklogId": mpklog_id}
+    session_payload = {**parsed, "dealId": deal_id, "mpklogId": mpklog_id}
+    session_id = crear_sesion(session_payload)
+    print(f"[/enviar] Sessão criada: {session_id}")
+
+    return {"ok": True, "dealId": deal_id, "mpklogId": mpklog_id, "session_id": session_id}
