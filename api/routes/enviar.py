@@ -44,6 +44,20 @@ async def enviar_datos(
 
     print(f"[/enviar] Campos recibidos: {list(parsed.keys())}")
 
+    # --- Enviar JSON ao Zoho Flow ---
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(ZOHO_WEBHOOK, json=parsed)
+            resp.raise_for_status()
+    except httpx.ConnectError:
+        raise HTTPException(status_code=503, detail="Error de conexión con Zoho Flow")
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Timeout en Zoho Flow")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=502, detail=f"Error de Zoho Flow: {e.response.status_code}")
+
+    print(f"[/enviar] Zoho respondió: {resp.status_code}")
+
     # Aguardar o Flow criar o deal (assíncrono — não bloqueante)
     delay = int(os.getenv("ZOHO_DEAL_FETCH_DELAY", "4"))
     await asyncio.sleep(delay)
@@ -66,25 +80,8 @@ async def enviar_datos(
         else:
             print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
-    # Criar sessão antes de enviar ao Zoho para incluir o sessionId no payload
-    zoho_payload = {**parsed, "dealId": deal_id, "mpklogId": mpklog_id}
-    session_id = crear_sesion(zoho_payload)
+    session_payload = {**parsed, "dealId": deal_id, "mpklogId": mpklog_id}
+    session_id = crear_sesion(session_payload)
     print(f"[/enviar] Sessão criada: {session_id}")
-
-    zoho_payload["sessionId"] = session_id
-
-    # --- Enviar JSON ao Zoho Flow ---
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(ZOHO_WEBHOOK, json=zoho_payload)
-            resp.raise_for_status()
-    except httpx.ConnectError:
-        raise HTTPException(status_code=503, detail="Error de conexión con Zoho Flow")
-    except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="Timeout en Zoho Flow")
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=502, detail=f"Error de Zoho Flow: {e.response.status_code}")
-
-    print(f"[/enviar] Zoho respondió: {resp.status_code}")
 
     return {"ok": True, "dealId": deal_id, "mpklogId": mpklog_id, "session_id": session_id}
