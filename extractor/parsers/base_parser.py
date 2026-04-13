@@ -537,6 +537,56 @@ class BaseParser:
                     return str(val)
         return None
 
+    # ── POTENCIAS CONTRATADAS ─────────────────────────────────────────────────
+
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Padrão genérico — tenta vários formatos comuns.
+        Devolve dict com os campos encontrados: {"pot_p1_kw": X, ...}
+        """
+        result = {}
+
+        # Padrão 1: "Potencia contratada en punta: X kW"
+        m = re.search(
+            r"potencia\s+contratada\s+en\s+punta[:\s]+([0-9,\.]+)\s*kW",
+            self.text, re.IGNORECASE
+        )
+        if m:
+            result["pot_p1_kw"] = float(norm(m.group(1)))
+
+        m = re.search(
+            r"potencia\s+contratada\s+en\s+valle[:\s]+([0-9,\.]+)\s*kW",
+            self.text, re.IGNORECASE
+        )
+        if m:
+            result["pot_p2_kw"] = float(norm(m.group(1)))
+
+        # Padrão 2: "Potencia contratada P1 X kW" (Naturgy 3.0TD)
+        for p in range(1, 7):
+            m = re.search(
+                rf"[Pp]otencia\s+contratada\s+P{p}\s+([0-9,\.]+)\s*kW",
+                self.text, re.IGNORECASE
+            )
+            if m:
+                result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+
+        # Padrão 3: "Potencias contratadas: punta X kW"
+        m = re.search(
+            r"[Pp]otencias?\s+contratadas?[:\s]+punta\s+([0-9,\.]+)\s*kW",
+            self.text, re.IGNORECASE
+        )
+        if m:
+            result.setdefault("pot_p1_kw", float(norm(m.group(1))))
+
+        m = re.search(
+            r"[Pp]otencias?\s+contratadas?[:\s]+.*?valle\s+([0-9,\.]+)\s*kW",
+            self.text, re.IGNORECASE
+        )
+        if m:
+            result.setdefault("pot_p2_kw", float(norm(m.group(1))))
+
+        return result
+
     def _calcular_dias(self) -> int:
         """Calcula los días del período a partir de periodo_inicio y periodo_fin ya guardados."""
         inicio = self.fields.get("periodo_inicio")

@@ -224,3 +224,31 @@ class CoxParser(BaseParser):
         except Exception as e:
             print(f"  ⚠️  CoxParser.extraer_precios_energia — error con fitz: {e}")
             super().extraer_precios_energia()
+
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Cox: "P1 80,00 kW * 0,053859 €/kW * (31/365) días"
+        O primeiro número após P{n} é a potência contratada em kW.
+        Já usa fitz — lê todas as páginas.
+        """
+        result = {}
+        if not self.pdf_path:
+            return super().extraer_potencias_contratadas()
+        try:
+            doc = fitz.open(self.pdf_path)
+            fitz_full = ""
+            for page in doc:
+                fitz_full += page.get_text() + "\n"
+            doc.close()
+
+            for p in range(1, 7):
+                m = re.search(
+                    rf"P{p}\s+([0-9,\.]+)\s*kW\s*\*",
+                    fitz_full, re.IGNORECASE
+                )
+                if m:
+                    result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+        except Exception as e:
+            print(f"  ⚠️  CoxParser.extraer_potencias_contratadas — error con fitz: {e}")
+
+        return result or super().extraer_potencias_contratadas()

@@ -192,6 +192,28 @@ class ContigoParser(BaseParser):
 
         return super().extraer_bono_social()
 
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Contigo: "P1. Potencia facturada  6,900 kW  ..."
+        Captura o valor kW da linha "Potencia facturada" de cada período.
+        """
+        result = {}
+        for linha in self.linhas:
+            if "potencia facturada" not in linha.lower():
+                continue
+            numeros = re.findall(r"[0-9]+[,\.][0-9]+", linha)
+            if not numeros:
+                continue
+            try:
+                val = float(norm(numeros[0]))
+                if 0.1 <= val <= 1000:
+                    m = re.search(r"\bP([1-6])\b", linha, re.IGNORECASE)
+                    if m:
+                        result[f"pot_p{m.group(1)}_kw"] = val
+            except (ValueError, TypeError):
+                pass
+        return result or super().extraer_potencias_contratadas()
+
     # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
 
     def extraer_precios_energia(self) -> None:

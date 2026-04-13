@@ -209,3 +209,18 @@ class PepeEnergyParser(BaseParser):
                 return norm(m.group(1))
 
         return super().extraer_alquiler()
+
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        PepeEnergy: "Potencia contratada en P1 (Punta): 4,3 kW"
+                    "Potencia contratada en P2 (Valle): 4,3 kW"
+        """
+        result = {}
+        for p in range(1, 3):
+            m = re.search(
+                rf"[Pp]otencia\s+contratada\s+en\s+P{p}[^0-9]*([0-9,\.]+)\s*kW",
+                self.text, re.IGNORECASE
+            )
+            if m:
+                result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+        return result or super().extraer_potencias_contratadas()

@@ -7,10 +7,23 @@
 #
 # Modificado: 2026-02-26 | Rodrigo Costa
 
+import re
+from typing import Optional
+from ..base import norm
 from .base_parser import BaseParser
 
 
 class IberdrolaParser(BaseParser):
-    pass
-    # Actualmente el BaseParser cubre los casos conocidos de Iberdrola.
-    # Añadir sobrescrituras aquí cuando se detecten diferencias en pruebas reales.
+
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Iberdrola: "Potencia punta: 4 kW / Potencia valle: 2 kW"
+        """
+        result = {}
+        m = re.search(r"[Pp]otencia\s+punta[:\s]+([0-9,\.]+)\s*kW", self.text, re.IGNORECASE)
+        if m:
+            result["pot_p1_kw"] = float(norm(m.group(1)))
+        m = re.search(r"[Pp]otencia\s+valle[:\s]+([0-9,\.]+)\s*kW", self.text, re.IGNORECASE)
+        if m:
+            result["pot_p2_kw"] = float(norm(m.group(1)))
+        return result or super().extraer_potencias_contratadas()

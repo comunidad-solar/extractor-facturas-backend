@@ -71,6 +71,24 @@ class EnergyaVMParser(BaseParser):
         self.raw["pp_p2"] = src2
         return pp1, pp2
 
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        EnergyaVM: "Término de potencia P1: 1,700 kW x 28 días x 0,094197 €/kW/día."
+        O valor kW está na linha de potência (antes de "x N días").
+        """
+        result = {}
+        for linha in self.linhas:
+            if not re.search(r"€/kW/d[ií]a", linha, re.IGNORECASE):
+                continue
+            for p in range(1, 3):
+                m = re.search(
+                    rf"P{p}\s*:\s*([0-9,\.]+)\s*kW",
+                    linha, re.IGNORECASE
+                )
+                if m and f"pot_p{p}_kw" not in result:
+                    result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+        return result or super().extraer_potencias_contratadas()
+
     # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
 
     def extraer_precios_energia(self) -> None:
