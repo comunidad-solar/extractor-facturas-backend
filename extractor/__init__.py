@@ -119,16 +119,18 @@ def extract_from_pdf(pdf_path: str) -> ExtractionResult:
             print(f"  ✅  {campo:<26} = {valor:<20} ← [PDF]")
 
     # ── 5. Completar con API Ingebau ──────────────────────────────────────────
+    # Guardar potências do PDF antes da chamada à Ingebau
+    campos_pot_pdf = {k: v for k, v in pot_pdf.items() if v is not None}
+
     cups           = fields.get("cups")
     periodo_inicio = fields.get("periodo_inicio")
     periodo_fin    = fields.get("periodo_fin")
 
     api_ok, api_error = llamar_api(cups, fields, raw, periodo_inicio, periodo_fin)
 
-    # PDF prevalece sobre Ingebau para potencias contratadas
-    for campo, valor in pot_pdf.items():
-        if valor is not None:
-            fields[campo] = valor
+    # Restaurar potências do PDF — PDF prevalece sobre Ingebau
+    for campo, valor in campos_pot_pdf.items():
+        fields[campo] = valor
 
     # ── 6. Resumen ────────────────────────────────────────────────────────────
     tarifa = fields.get("tarifa_acceso", "")

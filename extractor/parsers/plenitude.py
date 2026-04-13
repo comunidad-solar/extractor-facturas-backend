@@ -130,14 +130,30 @@ class PlenitudeParser(BaseParser):
     def extraer_potencias_contratadas(self) -> dict:
         """
         Plenitude: "Potencia contratada P1: 3,450 kW P2: 3,450 kW"
-        OCR pode alterar espaços — regex flexível.
+        OCR pode corromper "P1:" como "?::" — extrair os dois valores
+        numéricos kW da linha directamente, atribuindo em ordem P1, P2.
         """
         result = {}
-        for p in range(1, 3):
-            m = re.search(
-                rf"P{p}[:\s]+([0-9,\.]+)\s*kW",
-                self.text, re.IGNORECASE
-            )
-            if m:
-                result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+        for linha in self.linhas:
+            if "potencia contratada" not in linha.lower():
+                continue
+            if "kwh" in linha.lower():
+                continue
+            # Ignorar linhas sem valores numéricos de potência
+            if "facturación" in linha.lower() or "desglose" in linha.lower():
+                continue
+            # Ignorar linha de resumo "Por potencia contratada: X€"
+            if re.search(r"[0-9]+[,\.][0-9]+\s*€", linha):
+                continue
+
+            # Extrair todos os valores kW (não kWh) da linha
+            vals = re.findall(r"([0-9]+[,\.][0-9]+)\s*kW(?!h)", linha, re.IGNORECASE)
+            for i, val in enumerate(vals[:2], start=1):
+                try:
+                    result[f"pot_p{i}_kw"] = float(norm(val))
+                except (ValueError, TypeError):
+                    pass
+            if result:
+                break
+
         return result or super().extraer_potencias_contratadas()
