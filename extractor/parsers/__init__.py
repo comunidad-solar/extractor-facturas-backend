@@ -16,7 +16,8 @@ from .cox       import CoxParser
 from .contigo import ContigoParser
 from .naturgy_regulada import NaturgyReguladaParser
 from .pepeenergy import PepeEnergyParser
-from .plenitude import PlenitudeParser   
+from .plenitude    import PlenitudeParser
+from .energiaxxi   import EnergiaXXIParser
 
 
 
@@ -32,7 +33,8 @@ REGISTRY: dict = {
     "contigo": ContigoParser,
     "naturgy_regulada": NaturgyReguladaParser, 
     "pepeenergy": PepeEnergyParser,
-    "plenitude": PlenitudeParser,
+    "plenitude":   PlenitudeParser,
+    "energiaxxi":  EnergiaXXIParser,
 }
 
 

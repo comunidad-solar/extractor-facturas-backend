@@ -19,6 +19,7 @@ _PATRONES: list[tuple[str, str]] = [
     (r"comercializadora\s+regulada|gas\s*&\s*power", "naturgy_regulada"),
     (r"pepe\s*energy|energ[ií]a\s+colectiva", "pepeenergy"),
     (r"plenitude|eni\s+plenitude", "plenitude"),
+    (r"energ[ií]a\s+xxi|energiaxxi\.com", "energiaxxi"),
 
 
 ]
