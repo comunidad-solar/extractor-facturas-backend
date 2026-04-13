@@ -46,3 +46,19 @@ class RepsolParser(BaseParser):
                     pass
 
         return super().extraer_alquiler()
+
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Repsol: "Potencia contratada  Punta: 5,6kW  Valle: 5,6kW"
+        Também: "Punta: 5,75kW / Valle: 5,75kW" na secção "TU CONTRATO"
+        """
+        result = {}
+        m = re.search(r"[Pp]unta[:\s]+([0-9,\.]+)\s*kW", self.text, re.IGNORECASE)
+        if m:
+            result["pot_p1_kw"] = float(norm(m.group(1)))
+
+        m = re.search(r"[Vv]alle[:\s]+([0-9,\.]+)\s*kW", self.text, re.IGNORECASE)
+        if m:
+            result["pot_p2_kw"] = float(norm(m.group(1)))
+
+        return result or super().extraer_potencias_contratadas()

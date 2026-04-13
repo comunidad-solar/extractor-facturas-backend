@@ -134,6 +134,31 @@ class NaturgyReguladaParser(BaseParser):
         self.raw["pp_p2"] = src2
         return pp1, pp2
 
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        NaturgyRegulada: "Potencia contratada en punta: 9,9 kW  Potencia contratada en valle: 9,9 kW"
+        Formato PVPC concatenado: "P1(punta):9,900kW"
+        """
+        result = {}
+        m = re.search(r"punta[:\s]+([0-9,\.]+)\s*kW", self.text, re.IGNORECASE)
+        if m:
+            result["pot_p1_kw"] = float(norm(m.group(1)))
+        m = re.search(r"valle[:\s]+([0-9,\.]+)\s*kW", self.text, re.IGNORECASE)
+        if m:
+            result["pot_p2_kw"] = float(norm(m.group(1)))
+
+        # Fallback PVPC: "P1(punta):9,900kW"
+        if not result:
+            for p in range(1, 3):
+                m = re.search(
+                    rf"P{p}\s*\([^)]+\)\s*:\s*([0-9,\.]+)\s*kW",
+                    self.text, re.IGNORECASE
+                )
+                if m:
+                    result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+
+        return result or super().extraer_potencias_contratadas()
+
     # ── IVA ───────────────────────────────────────────────────────────────────
 
     def extraer_iva(self) -> Optional[str]:

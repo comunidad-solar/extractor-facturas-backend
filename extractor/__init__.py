@@ -111,14 +111,26 @@ def extract_from_pdf(pdf_path: str) -> ExtractionResult:
     parser = get_parser(comercializadora_id, full_text, pdf_path)
     fields, raw = parser.parse()
 
-    # ── 4. Completar con API Ingebau ──────────────────────────────────────────
+    # ── 4. Extraer potencias contratadas del PDF ──────────────────────────────
+    pot_pdf = parser.extraer_potencias_contratadas()
+    for campo, valor in pot_pdf.items():
+        if valor is not None:
+            fields[campo] = valor
+            print(f"  ✅  {campo:<26} = {valor:<20} ← [PDF]")
+
+    # ── 5. Completar con API Ingebau ──────────────────────────────────────────
     cups           = fields.get("cups")
     periodo_inicio = fields.get("periodo_inicio")
     periodo_fin    = fields.get("periodo_fin")
 
     api_ok, api_error = llamar_api(cups, fields, raw, periodo_inicio, periodo_fin)
 
-    # ── 5. Resumen ────────────────────────────────────────────────────────────
+    # PDF prevalece sobre Ingebau para potencias contratadas
+    for campo, valor in pot_pdf.items():
+        if valor is not None:
+            fields[campo] = valor
+
+    # ── 6. Resumen ────────────────────────────────────────────────────────────
     tarifa = fields.get("tarifa_acceso", "")
 
     def campo_vazio(k, v):

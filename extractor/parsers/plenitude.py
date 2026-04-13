@@ -126,3 +126,18 @@ class PlenitudeParser(BaseParser):
                 return
 
         super().extraer_precios_energia()
+
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Plenitude: "Potencia contratada P1: 3,450 kW P2: 3,450 kW"
+        OCR pode alterar espaços — regex flexível.
+        """
+        result = {}
+        for p in range(1, 3):
+            m = re.search(
+                rf"P{p}[:\s]+([0-9,\.]+)\s*kW",
+                self.text, re.IGNORECASE
+            )
+            if m:
+                result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+        return result or super().extraer_potencias_contratadas()
