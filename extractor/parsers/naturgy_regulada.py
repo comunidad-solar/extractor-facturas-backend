@@ -1,15 +1,7 @@
 # extractor/parsers/naturgy_regulada.py
-# Parser para facturas de Comercializadora Regulada, Gas & Power, S.A. (Grupo Naturgy).
-# Sobrescribe 5 métodos porque el formato difiere del BaseParser:
-#
-#   extraer_periodo():          fechas por extenso "8 de julio de 2025 a 3 de agosto de 2025"
-#   extraer_comercializadora(): captura "Comercializadora Regulada, Gas & Power, S.A."
-#   extraer_precios_potencia(): formato "X kW * Y €/kW y año * (N/365) días" → calcula Y/365
-#   extraer_iva():              "I.V.A." con puntos — "iva" not in "i.v.a." en BaseParser
-#   extraer_precios_energia():  corta texto antes de sección excedente bono social (duplicados)
-#
-# Modificado: 2026-02-27 | Rodrigo Costa
-#   - extraer_precios_potencia(): \s+ → \s* en filtro y regex para texto concatenado sin espacios
+# Modificado: 2026-04-14 | Rodrigo Costa
+#   - extraer_precios_energia(): fix PVPC — pe_p1 = importe_total / consumo_total
+#   - extraer_descuentos(): captura "Descuento por Bono Social" con valor absoluto
 
 import re
 from typing import Optional
@@ -17,7 +9,6 @@ from typing import Optional
 from ..base import norm, fmt_date
 from .base_parser import BaseParser
 
-# Meses en español → número
 MESES = {
     "enero": 1, "febrero": 2, "marzo": 3, "abril": 4,
     "mayo": 5, "junio": 6, "julio": 7, "agosto": 8,
@@ -26,10 +17,6 @@ MESES = {
 
 
 def _fecha_extenso(texto: str) -> Optional[str]:
-    """
-    Convierte "8 de julio de 2025" → "08/07/2025".
-    Devuelve None si no hace match.
-    """
     m = re.search(
         r"(\d{1,2})\s+de\s+([a-záéíóú]+)\s+de\s+(\d{4})",
         texto, re.IGNORECASE
@@ -46,13 +33,7 @@ def _fecha_extenso(texto: str) -> Optional[str]:
 
 class NaturgyReguladaParser(BaseParser):
 
-    # ── PERÍODO ───────────────────────────────────────────────────────────────
-
     def extraer_periodo(self) -> tuple[Optional[str], Optional[str]]:
-        """
-        Formato: "8 de julio de 2025 a 3 de agosto de 2025"
-        También intenta el BaseParser por si hay otra línea con formato DD/MM/YYYY.
-        """
         patron = (
             r"(\d{1,2}\s+de\s+[a-záéíóú]+\s+de\s+\d{4})"
             r"\s+a\s+"
@@ -67,16 +48,9 @@ class NaturgyReguladaParser(BaseParser):
                 self.raw["periodo_inicio"] = match
                 self.raw["periodo_fin"]    = match
                 return inicio, fin
-
         return super().extraer_periodo()
 
-    # ── COMERCIALIZADORA ──────────────────────────────────────────────────────
-
     def extraer_comercializadora(self) -> Optional[str]:
-        """
-        Nombre legal: "Comercializadora Regulada, Gas & Power, S.A."
-        Aparece en el encabezado de la página 1.
-        """
         m = re.search(
             r"(Comercializadora\s+Regulada\s*,?\s*Gas\s*&\s*Power\s*,?\s*S\.A\.?)",
             self.text, re.IGNORECASE
@@ -87,28 +61,16 @@ class NaturgyReguladaParser(BaseParser):
             return val
         return super().extraer_comercializadora()
 
-    # ── PRECIOS DE POTENCIA ───────────────────────────────────────────────────
-
     def extraer_precios_potencia(self) -> tuple[Optional[str], Optional[str]]:
-        """
-        Formato pdfplumber (texto concatenado sin espacios):
-            "P1(punta): 9,900kW*26,930550€/kWyaño*(26/365)días"
-        El precio está en €/kW/año → se divide entre 365 para obtener €/kW/día.
-        Se ignoran líneas de "margen de comercialización" que tienen el mismo formato.
-        """
         pp1 = pp2 = None
         src1 = src2 = ""
 
         for linha in self.linhas:
-            # Filtro: solo líneas con precio anual — \s* cubre texto concatenado
             if not re.search(r"€/kW\s*y\s*a[ñn]o", linha, re.IGNORECASE):
                 continue
-
-            # Ignorar línea de margen de comercialización
             if "margen" in linha.lower():
                 continue
 
-            # Capturar precio anual: "X kW * PRECIO €/kW y año"
             m = re.search(
                 r"[0-9,\.]+\s*kW\s*\*\s*([0-9]+[,\.][0-9]+)\s*€/kW\s*y\s*a[ñn]o",
                 linha, re.IGNORECASE
@@ -134,11 +96,50 @@ class NaturgyReguladaParser(BaseParser):
         self.raw["pp_p2"] = src2
         return pp1, pp2
 
+    def extraer_precios_energia(self) -> None:
+        es_pvpc = bool(re.search(r"PVPC|Mercado\s+Regulado", self.text, re.IGNORECASE))
+        if not es_pvpc:
+            super().extraer_precios_energia()
+            return
+
+        corte = re.search(r"excede\s+el\s+l.mite", self.text, re.IGNORECASE)
+        texto = self.text[:corte.start()] if corte else self.text
+
+        patron_peaje = re.compile(
+            r'P([1-3])\s*\([^)]+\)\s*:\s*([0-9]+(?:[,\.][0-9]+)?)\s*kWh\s*[x×\*]\s*'
+            r'([0-9]+[,\.][0-9]+)\s*(?:€|Eur)/kWh',
+            re.IGNORECASE
+        )
+
+        acumulado = {}
+        for m in patron_peaje.finditer(texto):
+            try:
+                periodo = int(m.group(1))
+                kwh     = float(norm(m.group(2)))
+                precio  = float(norm(m.group(3)))
+                eur     = kwh * precio
+
+                if periodo not in acumulado:
+                    acumulado[periodo] = {"kwh": 0.0, "eur": 0.0, "count": 0}
+                acumulado[periodo]["kwh"]   += kwh
+                acumulado[periodo]["eur"]   += eur
+                acumulado[periodo]["count"] += 1
+            except (ValueError, TypeError):
+                pass
+
+        if acumulado:
+            for periodo, acc in acumulado.items():
+                if acc["kwh"] > 0:
+                    precio = round(acc["eur"] / acc["kwh"], 6)
+                    campo  = f"pe_p{periodo}"
+                    self.fields[campo] = precio
+                    self.raw[campo]    = f"media ponderada {acc['count']} subperiodos"
+                    print(f"  ✅  {campo:<26} = {precio:<20} ← media ponderada peajes ({acc['count']} subperíodos)")
+            return
+
+        super().extraer_precios_energia()
+
     def extraer_potencias_contratadas(self) -> dict:
-        """
-        NaturgyRegulada: "Potencia contratada en punta: 9,9 kW  Potencia contratada en valle: 9,9 kW"
-        Formato PVPC concatenado: "P1(punta):9,900kW"
-        """
         result = {}
         m = re.search(r"punta[:\s]+([0-9,\.]+)\s*kW", self.text, re.IGNORECASE)
         if m:
@@ -147,7 +148,6 @@ class NaturgyReguladaParser(BaseParser):
         if m:
             result["pot_p2_kw"] = float(norm(m.group(1)))
 
-        # Fallback PVPC: "P1(punta):9,900kW"
         if not result:
             for p in range(1, 3):
                 m = re.search(
@@ -159,55 +159,89 @@ class NaturgyReguladaParser(BaseParser):
 
         return result or super().extraer_potencias_contratadas()
 
-    # ── IVA ───────────────────────────────────────────────────────────────────
+    def extraer_alquiler(self) -> Optional[str]:
+        """
+        NaturgyRegulada: texto concatenado pelo pdfplumber.
+        Formato: "Alquilerdelcontador: 26días*0,026630€/día"
+        O BaseParser falha porque espera espaços entre os tokens.
+        """
+        for linha in self.linhas:
+            if "alquiler" not in linha.lower():
+                continue
+
+            # Formato concatenado: "Nd[ií]as*PRECIO€/d[ií]a"
+            m = re.search(
+                r"[0-9]+\s*d[ií]as?\s*\*\s*([0-9]+[,\.][0-9]+)\s*[€e]\s*/\s*d[ií]a",
+                linha, re.IGNORECASE
+            )
+            if m:
+                self.raw["alq_eq_dia"] = linha[:80]
+                return norm(m.group(1))
+
+            # Formato con espacios — fallback al BaseParser
+        return super().extraer_alquiler()
 
     def extraer_iva(self) -> Optional[str]:
-        """
-        Formato: "I.V.A.: 21% s/ 49,26 €"
-        El BaseParser falla porque busca "iva" como substring y "i.v.a." no lo contiene.
-        """
         for linha in self.linhas:
             l = linha.lower()
             if "i.v.a" not in l and "iva" not in l:
                 continue
-
             m = re.search(r"\b(10|21)\s*%", linha, re.IGNORECASE)
             if m:
                 self.raw["iva"] = linha[:80]
                 return m.group(1)
-
         return super().extraer_iva()
 
-    # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
-
-    def extraer_precios_energia(self) -> None:
+    def extraer_descuentos(self) -> dict:
         """
-        Fatura PVPC — formato das linhas de energia:
-          "P1 (punta): 110 kWh * 0,092539 €/kWh"
-          "P2 (llano): 108 kWh * 0,028201 €/kWh"
-          "P3 (valle): 121 kWh * 0,002994 €/kWh"
-        Captura diretamente com regex próprio antes de qualquer corte.
-        Mapeia punta→p1, llano→p2, valle→p3.
+        NaturgyRegulada: "Descuento por Bono Social: 69,63 € * -42,5% ... -29,59 €"
+        Captura el valor absoluto del importe final del descuento.
         """
-        patron = re.compile(
-            r'P([1-3])\s*\(\s*(punta|llano|valle)\s*\)\s*:\s*'
-            r'[\d\.,]+\s*kWh\s*\*?\s*([0-9]+[,\.][0-9]+)\s*€/kWh',
-            re.IGNORECASE
-        )
+        resultado = {}
 
-        corte = re.search(r"excede\s+el\s+l[ií]mite", self.text, re.IGNORECASE)
-        texto = self.text[:corte.start()] if corte else self.text
+        for linha in self.linhas:
+            l = linha.lower()
+            if "descuento" not in l:
+                continue
+            if "financiaci" in l or "impuesto" in l:
+                continue
 
-        encontrados = {}
-        for m in patron.finditer(texto):
-            periodo = int(m.group(1))
-            precio  = float(m.group(3).replace(",", "."))
-            key     = f"pe_p{periodo}"
-            if key not in encontrados:
-                encontrados[key] = precio
-                self.fields[key] = precio
-                self.raw[key]    = m.group(0)[:80]
-                print(f"  ✅  {key:<26} = {precio:<20} ← precio energía P{periodo} ({m.group(2)})")
+            # Buscar valor negativo final: "-29,59 €"
+            valores_negativos = re.findall(
+                r"-\s*([0-9]+[,\.][0-9]+)\s*€",
+                linha, re.IGNORECASE
+            )
+            if valores_negativos:
+                try:
+                    valor = abs(float(norm(valores_negativos[-1])))
+                    if 0.01 <= valor <= 99999:
+                        nombre = re.split(r"[\d€\-\*\:]", linha)[0].strip()
+                        nombre = re.sub(r"\s+", " ", nombre).strip().rstrip(".,: ")
+                        if len(nombre) >= 3:
+                            # Normalizar nome para comparação (remove espaços e lowercase)
+                            nombre_norm = re.sub(r"\s+", "", nombre.lower())
+                            ja_existe = any(
+                                re.sub(r"\s+", "", k.lower()) == nombre_norm
+                                or abs(v - round(valor, 6)) < 0.01
+                                for k, v in resultado.items()
+                            )
+                            if not ja_existe:
+                                resultado[nombre] = round(valor, 6)
+                                self.raw[f"descuento_{nombre[:20]}"] = linha[:80]
+                                print(f"  ✅  {'descuento':<26} = {valor:<20} ← {nombre}")
+                except (ValueError, TypeError):
+                    pass
 
-        if not encontrados:
-            super().extraer_precios_energia()
+        # Complementar con BaseParser aplicando mesma deduplicação
+        base = super().extraer_descuentos()
+        for k, v in base.items():
+            k_norm = re.sub(r"\s+", "", k.lower())
+            ja_existe = any(
+                re.sub(r"\s+", "", r.lower()) == k_norm
+                or abs(rv - v) < 0.01
+                for r, rv in resultado.items()
+            )
+            if not ja_existe:
+                resultado[k] = v
+
+        return resultado

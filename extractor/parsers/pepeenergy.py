@@ -224,3 +224,41 @@ class PepeEnergyParser(BaseParser):
             if m:
                 result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
         return result or super().extraer_potencias_contratadas()
+
+    def extraer_descuentos(self) -> dict:
+        """
+        PepeEnergy: "Descuento cliente Pepephone  -3,14 €"
+        Línea con valor negativo explícito.
+        """
+        resultado = {}
+
+        for linha in self.linhas:
+            l = linha.lower()
+            if "descuento" not in l and "cuota" not in l:
+                continue
+            if "financiaci" in l or "impuesto" in l or "bono social" in l:
+                continue
+
+            valores_negativos = re.findall(
+                r"-\s*([0-9]+[,\.][0-9]+)\s*€",
+                linha, re.IGNORECASE
+            )
+            if valores_negativos:
+                try:
+                    valor = abs(float(norm(valores_negativos[-1])))
+                    if 0.01 <= valor <= 99999:
+                        nombre = re.split(r"[\d€\-\*]", linha)[0].strip()
+                        nombre = re.sub(r"\s+", " ", nombre).strip().rstrip(".,: ")
+                        if len(nombre) >= 3:
+                            resultado[nombre] = round(valor, 6)
+                            self.raw[f"descuento_{nombre[:20]}"] = linha[:80]
+                            print(f"  ✅  {'descuento':<26} = {valor:<20} ← {nombre}")
+                except (ValueError, TypeError):
+                    pass
+
+        base = super().extraer_descuentos()
+        for k, v in base.items():
+            if k not in resultado:
+                resultado[k] = v
+
+        return resultado
