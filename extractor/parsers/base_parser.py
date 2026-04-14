@@ -5,15 +5,27 @@
 #
 # Campos extraídos aquí (PDF):
 #   cups, periodo_inicio, periodo_fin, comercializadora,
-#   pp_p1, pp_p2, imp_ele, iva, alq_eq_dia
+#   pp_p1, pp_p2, imp_ele, iva, alq_eq_dia, bono_social,
+#   pe_p1..pe_p6, importe_factura, descuentos (en otros)
 #
-# Modificado: 2026-02-26 | Rodrigo Costa
+# Modificado: 2026-04-14 | Rodrigo Costa
+#   - extraer_descuentos(): nuevo método genérico
+#   - extraer_precios_energia(): media ponderada para períodos duplicados
+#   - parse(): incluye descuentos en el resultado
 
 import re
 from datetime import datetime
 from typing import Optional
 
 from ..base import norm, numeros, to_date, fmt_date, normalizar_fecha, log
+
+
+# Palabras clave para detección de descuentos
+_DESCUENTO_KEYWORDS = [
+    "descuento", "descto", "bonificaci", "compensaci",
+    "ajuste", "regularizaci", "incentivo", "promoci",
+    "ahorro", "rebaja", "reducci", "mecanismo de ajuste",
+]
 
 
 class BaseParser:
@@ -85,7 +97,92 @@ class BaseParser:
         self.fields["importe_factura"] = float(importe) if importe else None
         log("importe_factura", self.fields["importe_factura"], self.raw.get("importe_factura", ""))
 
+        # ── Descuentos ────────────────────────────────────────────────────────
+        descuentos = self.extraer_descuentos()
+        self.fields["descuentos"] = descuentos if descuentos else {}
+        if descuentos:
+            for nombre, valor in descuentos.items():
+                print(f"  ✅  {'descuento':<26} = {valor:<20} ← {nombre}")
+
         return self.fields, self.raw
+
+    # ── DESCUENTOS ────────────────────────────────────────────────────────────
+
+    def extraer_descuentos(self) -> dict:
+        """
+        Extrae descuentos, bonificaciones y ajustes de la factura.
+        Retorna dict {nombre: valor_absoluto_float} — sin signo negativo.
+
+        Formato más común:
+          "Descuento comercial        -7,63 €"
+          "Descuento por Bono Social  69,63 € * -42,5%  -29,59 €"
+          "Bonificación cliente        -3,14 €"
+
+        Estrategia:
+          1. Buscar líneas con keywords de descuento
+          2. Ignorar líneas de bono social (ya capturado aparte)
+          3. Extraer el último valor € de la línea (que es el importe final)
+          4. Guardar como valor absoluto positivo
+        """
+        resultado = {}
+
+        for linha in self.linhas:
+            l = linha.lower()
+
+            if not any(kw in l for kw in _DESCUENTO_KEYWORDS):
+                continue
+
+            if any(x in l for x in ["bono social", "financiaci", "impuesto", "iva"]):
+                continue
+
+            if "€" not in linha and "eur" not in l:
+                continue
+
+            # Valores negativos explícitos: "-X,XX €"
+            valores_negativos = re.findall(
+                r"-\s*([0-9]+[,\.][0-9]+)\s*€",
+                linha, re.IGNORECASE
+            )
+
+            if valores_negativos:
+                try:
+                    valor = abs(float(norm(valores_negativos[-1])))
+                    if 0.01 <= valor <= 99999:
+                        nombre = self._limpiar_nombre_descuento(linha)
+                        if nombre:
+                            resultado[nombre] = round(valor, 6)
+                            self.raw[f"descuento_{nombre[:20]}"] = linha[:80]
+                except (ValueError, TypeError):
+                    pass
+                continue
+
+            # Porcentaje negativo: "BASE € * -X% ... TOTAL €"
+            m_pct = re.search(
+                r"\*\s*-\s*([0-9]+[,\.][0-9]+)\s*%[^€]*([0-9]+[,\.][0-9]+)\s*€",
+                linha, re.IGNORECASE
+            )
+            if m_pct:
+                try:
+                    valor = abs(float(norm(m_pct.group(2))))
+                    if 0.01 <= valor <= 99999:
+                        nombre = self._limpiar_nombre_descuento(linha)
+                        if nombre:
+                            resultado[nombre] = round(valor, 6)
+                            self.raw[f"descuento_{nombre[:20]}"] = linha[:80]
+                except (ValueError, TypeError):
+                    pass
+
+        return resultado
+
+    def _limpiar_nombre_descuento(self, linha: str) -> str:
+        """
+        Extrae el nombre limpio del descuento de una línea.
+        Elimina números, símbolos monetarios y unidades.
+        """
+        nombre = re.split(r"[\d€\-\*]", linha)[0].strip()
+        nombre = re.sub(r"[^\w\s\.\,áéíóúñüÁÉÍÓÚÑÜ%]", " ", nombre)
+        nombre = re.sub(r"\s+", " ", nombre).strip().rstrip(".,: ")
+        return nombre[:80] if len(nombre) >= 3 else ""
 
     # ── CUPS ─────────────────────────────────────────────────────────────────
 
@@ -353,7 +450,6 @@ class BaseParser:
             l = linha.lower()
             if not any(x in l for x in keywords):
                 continue
-            # Excluir líneas que empiezan por "distribuidora" o "conceptos de distribuidora"
             if l.startswith("distribuidora") or l.startswith("conceptos de distribuidora"):
                 continue
 
@@ -439,9 +535,32 @@ class BaseParser:
 
     def extraer_precios_energia(self) -> None:
         """
-        Extrae pe_p1..pe_p6 (€/kWh) de la sección de energía.
-        Prueba 4 patrones en orden de prioridad; usa el primero que encuentre resultados.
+        Extrae pe_p1..pe_p6 (€/kWh).
+
+        Cuando el mismo período aparece más de una vez dentro de la sección
+        "Facturación por energía consumida", aplica media ponderada:
+            precio = suma(€) / suma(kWh)
+
+        Si no hay duplicados, usa los 4 patrones originales en orden de prioridad.
         """
+        # ── Intentar media ponderada para duplicados ───────────────────────
+        texto_energia = self._extraer_seccion_energia()
+
+        if texto_energia:
+            acumulado = self._acumular_kwh_eur(texto_energia)
+            if acumulado:
+                hay_duplicados = any(v["count"] > 1 for v in acumulado.values())
+                if hay_duplicados:
+                    for periodo, acc in acumulado.items():
+                        if acc["kwh"] > 0:
+                            precio = round(acc["eur"] / acc["kwh"], 6)
+                            campo  = f"pe_p{periodo}"
+                            self.fields[campo] = precio
+                            self.raw[campo]    = f"media ponderada {acc['count']} subperiodos"
+                            print(f"  ✅  {campo:<26} = {precio:<20} ← media ponderada ({acc['count']} subperíodos)")
+                    return
+
+        # ── Patrones originales (sin duplicados) ──────────────────────────
         precios: dict[int, float] = {}
 
         # Patrón 1 — Precio único: "Precio Energía 0,114009 €/kWh"
@@ -491,12 +610,77 @@ class BaseParser:
                 self.fields[f"pe_p{i}"] = val
                 self.raw[f"pe_p{i}"] = src
 
-        # Log de resultados
         for i in range(1, 7):
             key = f"pe_p{i}"
             val = self.fields.get(key)
             if val is not None:
                 print(f"  ✅  {key:<26} = {val:<20} ← precio energía P{i}")
+
+    def _extraer_seccion_energia(self) -> Optional[str]:
+        """
+        Extrae el bloque de texto correspondiente a la sección
+        'Facturación por energía consumida' o similar.
+        Retorna None si no encuentra la sección.
+        """
+        patron_inicio = re.compile(
+            r'[Ff]acturación\s+por\s+energ[ií]a\s+consumida|'
+            r'[Tt][eé]rmino\s+(?:de\s+)?[Ee]nerg[ií]a\s+[Aa]ctiva|'
+            r'[Ee]nerg[ií]a\s+[Cc]onsum',
+            re.IGNORECASE
+        )
+        patron_fin = re.compile(
+            r'[Ff]acturación\s+por\s+(?:potencia|financiaci|bono)|'
+            r'[Ii]mpuesto\s+(?:de\s+)?electricidad|'
+            r'[Aa]lquiler|[Vv]arios|[Ss]ubtotal',
+            re.IGNORECASE
+        )
+
+        inicio_idx = None
+        for i, linha in enumerate(self.linhas):
+            if patron_inicio.search(linha):
+                inicio_idx = i
+                break
+
+        if inicio_idx is None:
+            return None
+
+        fin_idx = len(self.linhas)
+        for i in range(inicio_idx + 1, len(self.linhas)):
+            if patron_fin.search(self.linhas[i]):
+                fin_idx = i
+                break
+
+        return "\n".join(self.linhas[inicio_idx:fin_idx])
+
+    def _acumular_kwh_eur(self, texto: str) -> dict:
+        """
+        Busca líneas con formato "P{n} ... X kWh ... Y €/kWh" y acumula
+        kwh y € por período. Retorna dict {periodo: {kwh, eur, count}}.
+        """
+        patron = re.compile(
+            r'[Pp]([1-6])[^0-9]{0,20}'
+            r'([0-9]+[,\.][0-9]+)\s*kWh\s*[x×\*]?\s*'
+            r'([0-9]+[,\.][0-9]+)\s*(?:€|Eur)/kWh',
+            re.IGNORECASE
+        )
+
+        acumulado = {}
+        for m in patron.finditer(texto):
+            try:
+                periodo = int(m.group(1))
+                kwh     = float(norm(m.group(2)))
+                precio  = float(norm(m.group(3)))
+                eur     = kwh * precio
+
+                if periodo not in acumulado:
+                    acumulado[periodo] = {"kwh": 0.0, "eur": 0.0, "count": 0}
+                acumulado[periodo]["kwh"]   += kwh
+                acumulado[periodo]["eur"]   += eur
+                acumulado[periodo]["count"] += 1
+            except (ValueError, TypeError):
+                pass
+
+        return acumulado
 
     # ── IMPORTE TOTAL DE LA FACTURA ───────────────────────────────────────────
 
@@ -504,15 +688,8 @@ class BaseParser:
         """
         Captura el importe total de la factura.
         Soporta separadores de miles con punto: "2.738,15 €"
-        Patrones por orden de prioridad:
-          1. "TOTAL IMPORTE FACTURA ... X.XXX,XX €"
-          2. "TOTAL ... X,XX €"
-          3. "Total a pagar ... X,XX €"
-          4. "IMPORTE FACTURA: X,XX €"
-        Acepta valores entre 1 € y 99999 €.
         """
         def parse_importe(texto: str) -> Optional[float]:
-            # Eliminar puntos separadores de miles: "2.738,15" → "2738,15"
             limpio = re.sub(r'\.(?=\d{3}[,\d])', '', texto)
             try:
                 val = float(norm(limpio))
@@ -561,7 +738,7 @@ class BaseParser:
         if m:
             result["pot_p2_kw"] = float(norm(m.group(1)))
 
-        # Padrão 2: "Potencia contratada P1 X kW" (Naturgy 3.0TD)
+        # Padrão 2: "Potencia contratada P1 X kW"
         for p in range(1, 7):
             m = re.search(
                 rf"[Pp]otencia\s+contratada\s+P{p}\s+([0-9,\.]+)\s*kW",
