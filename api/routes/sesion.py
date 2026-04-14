@@ -14,7 +14,7 @@ _store: dict[str, dict] = {}
 
 router = APIRouter(prefix="/sesion", tags=["sesion"])
 
-_TTL_MINUTES = 30
+_TTL_MINUTES = 40
 
 
 def crear_sesion(data: Any) -> str:

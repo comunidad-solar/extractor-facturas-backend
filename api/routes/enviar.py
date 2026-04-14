@@ -86,6 +86,16 @@ async def enviar_datos(
     if "cliente" in session_payload:
         session_payload["cliente"]["dealId"]   = deal_id
         session_payload["cliente"]["mpklogId"] = mpklog_id
+    # Injectar descuentos em factura.otros e mover bono_social para dentro de descuentos
+    factura = session_payload.get("factura", {})
+    if "otros" not in factura:
+        factura["otros"] = {}
+    descuentos = factura.get("descuentos") or {}
+    bono_social = factura["otros"].pop("bono_social", None)
+    if bono_social is not None:
+        descuentos["bono_social"] = bono_social
+    factura["otros"]["descuentos"] = descuentos
+    session_payload["factura"] = factura
     session_id = crear_sesion(session_payload)
     print(f"[/enviar] Sessão criada: {session_id}")
 
