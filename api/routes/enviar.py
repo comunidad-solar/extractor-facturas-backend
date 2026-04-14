@@ -82,6 +82,10 @@ async def enviar_datos(
 
     # --- 4. Criar sessão ---
     session_payload = {**parsed, "dealId": deal_id, "mpklogId": mpklog_id}
+    # Actualizar também dentro de cliente para evitar duplicação
+    if "cliente" in session_payload:
+        session_payload["cliente"]["dealId"]   = deal_id
+        session_payload["cliente"]["mpklogId"] = mpklog_id
     session_id = crear_sesion(session_payload)
     print(f"[/enviar] Sessão criada: {session_id}")
 
