@@ -44,7 +44,7 @@ async def enviar_datos(
 
     print(f"[/enviar] Campos recibidos: {list(parsed.keys())}")
 
-    # --- Enviar JSON ao Zoho Flow ---
+    # --- 1. Enviar JSON ao Zoho Flow ---
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(ZOHO_WEBHOOK, json=parsed)
@@ -58,11 +58,11 @@ async def enviar_datos(
 
     print(f"[/enviar] Zoho respondió: {resp.status_code}")
 
-    # Aguardar o Flow criar o deal (assíncrono — não bloqueante)
+    # --- 2. Aguardar o Flow criar o deal ---
     delay = int(os.getenv("ZOHO_DEAL_FETCH_DELAY", "4"))
     await asyncio.sleep(delay)
 
-    # Buscar dealId e mpklogId em paralelo
+    # --- 3. Buscar dealId e mpklogId em paralelo ---
     correo = parsed.get("cliente", {}).get("correo", "")
     deal_id = None
     mpklog_id = None
@@ -80,6 +80,7 @@ async def enviar_datos(
         else:
             print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
+    # --- 4. Criar sessão ---
     session_payload = {**parsed, "dealId": deal_id, "mpklogId": mpklog_id}
     session_id = crear_sesion(session_payload)
     print(f"[/enviar] Sessão criada: {session_id}")

@@ -410,3 +410,36 @@ class NaturgyParser(BaseParser):
             super().extraer_precios_energia()
         finally:
             self.text = texto_backup
+
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Naturgy 3.0TD: "Potencia contratada P1  6,67 kW"
+        Naturgy 2.0TD: "Potencia contratada P1  2,30 kW / P2  2,30 kW"
+        Usa fitz como fonte primária (tabela de 2 colunas).
+        """
+        result = {}
+
+        # Fonte primária: fitz
+        fitz_text = self._get_fitz_text()
+        texto = fitz_text if fitz_text else self.text
+
+        for p in range(1, 7):
+            m = re.search(
+                rf"[Pp]otencia\s+contratada\s+P{p}\s+([0-9,\.]+)\s*kW",
+                texto, re.IGNORECASE
+            )
+            if m:
+                result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+
+        # Fallback com linhas limpas
+        if not result:
+            for linha in self.linhas_clean:
+                for p in range(1, 7):
+                    m = re.search(
+                        rf"[Pp]otencia\s+contratada\s+P{p}\s+([0-9,\.]+)\s*kW",
+                        linha, re.IGNORECASE
+                    )
+                    if m and f"pot_p{p}_kw" not in result:
+                        result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
+
+        return result or super().extraer_potencias_contratadas()

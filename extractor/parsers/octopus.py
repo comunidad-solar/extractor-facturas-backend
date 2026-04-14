@@ -90,3 +90,24 @@ class OctopusParser(BaseParser):
                 self.fields[campo] = precio
                 self.raw[campo]    = match.group(0)[:80]
                 print(f"  ✅  {campo:<26} = {precio:<20} ← {label} {precio} €/kWh")
+
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Octopus: tabela "Potencia Contratada (kW)  4,60  4,60  0  0  0  0"
+        Os valores aparecem na linha "Potencia Contratada (kW)" separados por espaços.
+        """
+        result = {}
+        for linha in self.linhas:
+            if "potencia contratada" not in linha.lower():
+                continue
+            vals = []
+            for n in re.findall(r"([0-9]+[,\.][0-9]+|[0-9]+)", linha):
+                try:
+                    vals.append(float(n.replace(",", ".")))
+                except ValueError:
+                    pass
+            for i, val in enumerate(vals[:6], start=1):
+                result[f"pot_p{i}_kw"] = val
+            if result:
+                break
+        return result or super().extraer_potencias_contratadas()

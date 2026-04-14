@@ -269,6 +269,26 @@ class EndesaParser(BaseParser):
 
         return None
 
+    def extraer_potencias_contratadas(self) -> dict:
+        """
+        Endesa: "Potencias contratadas: punta 4,600 kW; valle 4,600 kW"
+        Corta antes de "FACTURA ENDESA X" para evitar capturar valores errados.
+        """
+        corte = re.search(
+            r"FACTURA\s+ENDESA\s+X|ENDESA\s+X\s+SERVICIOS",
+            self.text, re.IGNORECASE
+        )
+        texto = self.text[:corte.start()] if corte else self.text
+
+        result = {}
+        m = re.search(r"punta\s+([0-9,\.]+)\s*kW", texto, re.IGNORECASE)
+        if m:
+            result["pot_p1_kw"] = float(norm(m.group(1)))
+        m = re.search(r"valle\s+([0-9,\.]+)\s*kW", texto, re.IGNORECASE)
+        if m:
+            result["pot_p2_kw"] = float(norm(m.group(1)))
+        return result or super().extraer_potencias_contratadas()
+
     def extraer_iva(self):
         """
         Endesa: el PDF puede contener dos facturas — Endesa Energía (principal) y
