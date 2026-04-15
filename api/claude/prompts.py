@@ -20,7 +20,11 @@ _PREAMBLE = (
     "El campo 'otros' debe ser una cadena JSON válida (string) con cualquier "
     "dato extra: períodos adicionales (pp_p3..pp_p6, pe_p4..pe_p6), descuentos, "
     "conceptos no estándar, etc. Ejemplo: '{\"pp_p3\": 0.035, \"descuentos\": {\"pack\": -5.0}}'. "
-    "Si no hay datos extra, usa la cadena vacía \"\"."
+    "Si no hay datos extra, usa la cadena vacía \"\".\n"
+    "CRÍTICO — campos pp_p1..pp_p6 (precio de potencia): "
+    "SIEMPRE en €/kW·día. "
+    "Si la factura muestra el precio en €/kW·año, divídelo entre 365 antes de escribirlo. "
+    "Ejemplo: 26,930550 €/kW·año → 26.930550 / 365 = 0.073783 €/kW·día."
 )
 
 

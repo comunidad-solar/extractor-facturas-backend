@@ -60,8 +60,9 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
             "pe_p4": result.pe_p4, "pe_p5": result.pe_p5, "pe_p6": result.pe_p6,
         },
         "impuestos": {
-            "imp_ele": result.imp_ele,
-            "iva":     result.iva,
+            "imp_ele":         result.imp_ele,
+            "imp_ele_eur_kwh": result.imp_ele_eur_kwh,
+            "iva":             result.iva,
         },
         "otros": {
             "alq_eq_dia":      result.alq_eq_dia,
