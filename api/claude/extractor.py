@@ -30,8 +30,19 @@ def _parse_json_from_text(text: str) -> dict:
 
 
 def _build_response(data: dict) -> ExtractionResponseAI:
-    """Filtra claves desconocidas y construye ExtractionResponseAI."""
+    """Filtra claves desconocidas y construye ExtractionResponseAI.
+    Convierte 'otros' y 'descuentos' de string JSON a dict si es necesario."""
     filtered = {k: v for k, v in data.items() if k in _VALID_FIELDS}
+
+    for field in ("otros", "descuentos"):
+        val = filtered.get(field)
+        if isinstance(val, str):
+            try:
+                parsed = json.loads(val) if val.strip() else None
+                filtered[field] = parsed if isinstance(parsed, dict) else None
+            except (json.JSONDecodeError, ValueError):
+                filtered[field] = None
+
     return ExtractionResponseAI(**filtered)
 
 

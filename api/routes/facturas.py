@@ -2,32 +2,40 @@
 # Endpoint POST /facturas/extraer
 # Usa Claude API como caminho de extracção principal.
 # Ingebau desactivado temporalmente.
-#
-# Modificado: 2026-04-15 | Rodrigo Costa
-#   - Redirigido a extract_with_claude() en lugar de extract_from_pdf() (regex)
-#   - Ingebau desactivado temporalmente (TODO: reactivar cuando se retome)
 
+import asyncio
 import json
 import os
+from typing import Optional
 
 import anthropic
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from api.models import ExtractionResponseAI
+from fastapi import APIRouter, Form, UploadFile, File, HTTPException
+
 from api.claude.extractor import extract_with_claude
+from api.models import ExtractionResponseAI
 from api.routes.sesion import crear_sesion
+from api.zoho_crm import buscar_deal_por_email, buscar_mpklog_por_email
 
 router = APIRouter(prefix="/facturas", tags=["facturas"])
 
 RESULTADOS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "resultados")
 os.makedirs(RESULTADOS_DIR, exist_ok=True)
 
+_EXCLUDE = {"api_ok", "api_error", "fichero_json"}
 
-@router.post("/extraer", response_model=ExtractionResponseAI)
-async def extraer_factura(file: UploadFile = File(...)):
+
+@router.post("/extraer", response_model=ExtractionResponseAI,
+             response_model_exclude=_EXCLUDE)
+async def extraer_factura(
+    file: UploadFile = File(...),
+    correo: Optional[str] = Form(None),
+):
     """
     Recibe una factura PDF y extrae los campos usando Claude API.
-    Ingebau desactivado temporalmente — solo Claude.
+    Si se proporciona 'correo', busca dealId y mpklogId en Zoho CRM.
     """
+    print(f"\n  [/facturas/extraer] ficheiro: {file.filename}  |  correo: {correo or '(no proporcionado)'}")
+
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="El archivo debe ser un PDF.")
 
@@ -36,19 +44,40 @@ async def extraer_factura(file: UploadFile = File(...)):
     try:
         result = extract_with_claude(pdf_bytes)
     except anthropic.APIStatusError as e:
-        print(f"  ❌  APIStatusError {e.status_code}: {e}")
+        msg = str(e).encode("ascii", "replace").decode("ascii")
+        print(f"  [ERROR]  APIStatusError {e.status_code}: {msg}")
         raise HTTPException(status_code=502, detail=f"Error de la API de Claude ({e.status_code}): {e}")
     except anthropic.APITimeoutError:
-        print("  ❌  APITimeoutError")
+        print("  [ERROR]  APITimeoutError")
         raise HTTPException(status_code=504, detail="Timeout llamando a la API de Claude.")
     except Exception as e:
         import traceback
-        print(f"  ❌  Error inesperado: {e}")
+        msg = str(e).encode("ascii", "replace").decode("ascii")
+        print(f"  [ERROR]  Error inesperado: {msg}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
 
-    # Crear sesión con el payload extraído
-    result.session_id = crear_sesion(result.model_dump())
+    # Buscar dealId y mpklogId en Zoho CRM si se proporcionó correo
+    deal_id, mpklog_id = None, None
+    if correo:
+        deal_id, mpklog_id = await asyncio.gather(
+            buscar_deal_por_email(correo),
+            buscar_mpklog_por_email(correo),
+        )
+        if deal_id:
+            print(f"  ✅  dealId: {deal_id}")
+        if mpklog_id:
+            print(f"  ✅  mpklogId: {mpklog_id}")
+
+    # Construir payload para la sesión (sin campos de metadatos internos)
+    session_payload = {
+        k: v for k, v in result.model_dump().items()
+        if k not in _EXCLUDE
+    }
+    session_payload["dealId"]   = deal_id
+    session_payload["mpklogId"] = mpklog_id
+
+    result.session_id = crear_sesion(session_payload)
 
     # Guardar JSON
     cups   = result.cups or "sin_cups"
@@ -56,9 +85,7 @@ async def extraer_factura(file: UploadFile = File(...)):
     fin    = (result.periodo_fin    or "").replace("/", "-")
     nombre = f"{cups}_{inicio}_{fin}.json"
     ruta   = os.path.join(RESULTADOS_DIR, nombre)
-
     with open(ruta, "w", encoding="utf-8") as f:
-        json.dump(result.model_dump(), f, ensure_ascii=False, indent=2)
+        json.dump(session_payload, f, ensure_ascii=False, indent=2)
 
-    result.fichero_json = nombre
     return result
