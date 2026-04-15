@@ -16,7 +16,11 @@ _PREAMBLE = (
     "con todos los campos que puedas extraer.\n"
     "NO escribas ficheros. NO ejecutes scripts. Solo devuelve el JSON.\n"
     "Los campos 'validacion_cuadre' y 'session_id' deben ser siempre null "
-    "(se calculan en el servidor)."
+    "(se calculan en el servidor).\n"
+    "El campo 'otros' debe ser una cadena JSON válida (string) con cualquier "
+    "dato extra: períodos adicionales (pp_p3..pp_p6, pe_p4..pe_p6), descuentos, "
+    "conceptos no estándar, etc. Ejemplo: '{\"pp_p3\": 0.035, \"descuentos\": {\"pack\": -5.0}}'. "
+    "Si no hay datos extra, usa la cadena vacía \"\"."
 )
 
 

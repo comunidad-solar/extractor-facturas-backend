@@ -1,7 +1,30 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "Bash(mkdir -p \"/Users/vbenhur/Documents/Projetos VS/extrator-facturas-backend/.claude/skills\")",
+      "Bash(cp -r \"/Users/vbenhur/Documents/Projetos VS/extrator-facturas-backend/invoice-processor\" \"/Users/vbenhur/Documents/Projetos VS/extrator-facturas-backend/.claude/skills/\")",
+      "Bash(python3 -c \"import json; json.load\\(open\\('facturas/repsol_2.0TD/REPSOL 2.0TD._ai.json', encoding='utf-8'\\)\\); print\\('_ai.json OK'\\)\")",
+      "Bash(python3 -c \"import json; json.load\\(open\\('facturas/repsol_2.0TD/REPSOL 2.0TD._processed.json', encoding='utf-8'\\)\\); print\\('_processed.json OK'\\)\")",
+      "Bash(python3 \".claude/skills/leer-factura/scripts/validate.py\" \"facturas/repsol_2.0TD/REPSOL 2.0TD._ai.json\")",
+      "Bash(python3 \".claude/skills/leer-factura/scripts/validate.py\" \"facturas/repsol_2.0TD/REPSOL 2.0TD._processed.json\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import sys; [print\\(l.encode\\('ascii','replace'\\).decode\\(\\)\\) for l in sys.stdin]\")",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(python -c \"import pdfplumber; print\\('OK'\\)\")",
+      "Bash(python -m uvicorn --version)",
+      "Bash(curl -s http://localhost:8000/openapi.json)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\([k for k in d['paths'].keys\\(\\)]\\)\")",
+      "Bash(python -c \"from api.main import app; print\\('OK'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(py -3.13 -m uvicorn api.main:app --reload --port 8000)",
+      "Bash(grep -c \"WatchFiles detected changes in 'api\\\\\\\\\\\\\\\\models.py'\" \"C:\\\\Users\\\\ianro\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-ianro-OneDrive-Documentos-GitHub-extractor-facturas-backend\\\\5408ed86-7324-4600-abe5-d4542beab226\\\\tasks\\\\bff6un6mu.output\")",
+      "Bash(netstat -ano)",
+      "Bash(curl -s -X POST http://localhost:8000/facturas/extraer -F \"file=@facturas/iberdrola_1/iberdrola1.pdf\")",
+      "Bash(py -3.12 -m pip install pdfplumber pymupdf)",
+      "Bash(findstr :8000)",
+      "Bash(taskkill /PID 11324 /F)",
+      "Bash(py -3.13 -c \"from api.main import app; print\\('OK'\\)\")"
     ]
   }
 }

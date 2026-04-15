@@ -58,30 +58,30 @@ class ExtractionResponse(BaseModel):
 
 class ClaudeExtractionInput(BaseModel):
     """Modelo slim para output_format de messages.parse().
-    Límite de la API: 24 campos opcionales. Períodos extra (pp_p3..p6, pe_p4..p6)
-    van en 'otros' y se mapean a ExtractionResponseAI en el servidor."""
+    Sem campos Optional — usa defaults 0.0/""/dict vazio para evitar union types
+    que causam timeout de compilação na API. O mapper converte zeros/vazios → None.
+    Períodos extra (pp_p3..p6, pe_p4..p6) vão em 'otros'."""
 
-    cups:               Optional[str]   = None
-    periodo_inicio:     Optional[str]   = None
-    periodo_fin:        Optional[str]   = None
-    comercializadora:   Optional[str]   = None
-    pp_p1:              Optional[float] = None
-    pp_p2:              Optional[float] = None
-    pe_p1:              Optional[float] = None
-    pe_p2:              Optional[float] = None
-    pe_p3:              Optional[float] = None
-    imp_ele:            Optional[float] = None
-    iva:                Optional[int]   = None
-    alq_eq_dia:         Optional[float] = None
-    bono_social:        Optional[float] = None
-    importe_factura:    Optional[float] = None
-    imp_termino_energia_eur:    Optional[float] = None
-    imp_termino_potencia_eur:   Optional[float] = None
-    imp_impuesto_electrico_eur: Optional[float] = None
-    imp_alquiler_eur:           Optional[float] = None
-    imp_iva_eur:                Optional[float] = None
-    descuentos:         Optional[dict]  = None
-    otros:              Optional[dict]  = None  # incl. pp_p3..p6, pe_p4..p6
+    cups:               str   = ""
+    periodo_inicio:     str   = ""
+    periodo_fin:        str   = ""
+    comercializadora:   str   = ""
+    importe_factura:    float = 0.0
+    pp_p1:              float = 0.0
+    pp_p2:              float = 0.0
+    pe_p1:              float = 0.0
+    pe_p2:              float = 0.0
+    pe_p3:              float = 0.0
+    imp_ele:            float = 0.0
+    iva:                int   = 0
+    alq_eq_dia:         float = 0.0
+    bono_social:        float = 0.0
+    imp_termino_energia_eur:    float = 0.0
+    imp_termino_potencia_eur:   float = 0.0
+    imp_impuesto_electrico_eur: float = 0.0
+    imp_alquiler_eur:           float = 0.0
+    imp_iva_eur:                float = 0.0
+    otros:              str   = ""  # JSON string com pp_p3..p6, pe_p4..p6, descuentos, etc.
 
 
 class ValidacionCuadre(BaseModel):
