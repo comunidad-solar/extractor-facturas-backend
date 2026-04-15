@@ -28,12 +28,22 @@ _EXCLUDE = {"api_ok", "api_error", "fichero_json"}
              response_model_exclude=_EXCLUDE)
 async def extraer_factura(
     file: UploadFile = File(...),
-    correo: Optional[str] = Form(None),
+    data: Optional[str] = Form(None, description='JSON: {"cliente": {...}, "ce": {...}, "Fsmstate": "...", "FsmPrevious": "..."}'),
 ):
     """
     Recibe una factura PDF y extrae los campos usando Claude API.
-    Si se proporciona 'correo', busca dealId y mpklogId en Zoho CRM.
+    El campo 'data' (JSON opcional) puede incluir cliente, ce, Fsmstate, etc.
+    Si 'data' contiene cliente.correo, busca dealId y mpklogId en Zoho CRM.
     """
+    # Parsear data opcional
+    extra: dict = {}
+    if data:
+        try:
+            extra = json.loads(data)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Campo 'data' no es JSON válido.")
+
+    correo = extra.get("cliente", {}).get("correo", "")
     print(f"\n  [/facturas/extraer] ficheiro: {file.filename}  |  correo: {correo or '(no proporcionado)'}")
 
     if not file.filename.lower().endswith(".pdf"):
@@ -57,7 +67,7 @@ async def extraer_factura(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
 
-    # Buscar dealId y mpklogId en Zoho CRM si se proporcionó correo
+    # Buscar dealId y mpklogId en Zoho CRM si hay correo
     deal_id, mpklog_id = None, None
     if correo:
         deal_id, mpklog_id = await asyncio.gather(
@@ -69,15 +79,25 @@ async def extraer_factura(
         if mpklog_id:
             print(f"  ✅  mpklogId: {mpklog_id}")
 
-    # Construir payload para la sesión (sin campos de metadatos internos)
-    session_payload = {
+    # Inyectar dealId/mpklogId en cliente
+    if "cliente" in extra:
+        extra["cliente"]["dealId"]   = deal_id
+        extra["cliente"]["mpklogId"] = mpklog_id
+
+    # Construir payload completo para la sesión
+    factura_payload = {
         k: v for k, v in result.model_dump().items()
         if k not in _EXCLUDE
     }
-    session_payload["dealId"]   = deal_id
-    session_payload["mpklogId"] = mpklog_id
+    session_payload = {
+        **extra,                      # cliente, ce, Fsmstate, FsmPrevious, ...
+        "factura":  factura_payload,  # datos extraídos por Claude
+        "dealId":   deal_id,
+        "mpklogId": mpklog_id,
+    }
 
     result.session_id = crear_sesion(session_payload)
+    print(f"  ✅  Sessão criada: {result.session_id}")
 
     # Guardar JSON
     cups   = result.cups or "sin_cups"
