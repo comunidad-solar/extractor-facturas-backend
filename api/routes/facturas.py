@@ -1,62 +1,59 @@
 # api/routes/facturas.py
 # Endpoint POST /facturas/extraer
-# Recibe un PDF, extrae los 24 campos y guarda el resultado en resultados/.
+# Usa Claude API como caminho de extracção principal.
+# Ingebau desactivado temporalmente.
 #
-# Modificado: 2026-02-27 | Rodrigo Costa
+# Modificado: 2026-04-15 | Rodrigo Costa
+#   - Redirigido a extract_with_claude() en lugar de extract_from_pdf() (regex)
+#   - Ingebau desactivado temporalmente (TODO: reactivar cuando se retome)
 
-import os
 import json
-import tempfile
+import os
 
+import anthropic
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from api.models import ExtractionResponse
-from extractor import extract_from_pdf
+from api.models import ExtractionResponseAI
+from api.claude.extractor import extract_with_claude
+from api.routes.sesion import crear_sesion
 
 router = APIRouter(prefix="/facturas", tags=["facturas"])
 
-# Carpeta donde se guardan los JSONs
 RESULTADOS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "resultados")
 os.makedirs(RESULTADOS_DIR, exist_ok=True)
 
 
-@router.post("/extraer", response_model=ExtractionResponse)
+@router.post("/extraer", response_model=ExtractionResponseAI)
 async def extraer_factura(file: UploadFile = File(...)):
     """
-    Recibe una factura PDF, extrae los 24 campos y guarda el resultado en JSON.
+    Recibe una factura PDF y extrae los campos usando Claude API.
+    Ingebau desactivado temporalmente — solo Claude.
     """
-    # Validar que sea PDF
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="El archivo debe ser un PDF.")
 
-    # Guardar PDF temporalmente para que extract_from_pdf() pueda leerlo
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-        tmp.write(await file.read())
-        tmp_path = tmp.name
+    pdf_bytes = await file.read()
 
     try:
-        result = extract_from_pdf(tmp_path)
+        result = extract_with_claude(pdf_bytes)
+    except anthropic.APIStatusError as e:
+        raise HTTPException(status_code=502, detail=f"Error de la API de Claude: {e.message}")
+    except anthropic.APITimeoutError:
+        raise HTTPException(status_code=504, detail="Timeout llamando a la API de Claude.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
-    finally:
-        os.unlink(tmp_path)  # eliminar PDF temporal siempre
 
-    fields = result.fields
-
-    # Construir nombre del fichero JSON
-    cups    = fields.get("cups") or "sin_cups"
-    inicio  = (fields.get("periodo_inicio") or "").replace("/", "-")
-    fin     = (fields.get("periodo_fin")    or "").replace("/", "-")
-    nombre  = f"{cups}_{inicio}_{fin}.json"
-    ruta    = os.path.join(RESULTADOS_DIR, nombre)
+    # Crear sesión con el payload extraído
+    result.session_id = crear_sesion(result.model_dump())
 
     # Guardar JSON
-    payload = {**fields, "api_ok": result.api_ok, "api_error": result.api_error}
-    with open(ruta, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=2)
+    cups   = result.cups or "sin_cups"
+    inicio = (result.periodo_inicio or "").replace("/", "-")
+    fin    = (result.periodo_fin    or "").replace("/", "-")
+    nombre = f"{cups}_{inicio}_{fin}.json"
+    ruta   = os.path.join(RESULTADOS_DIR, nombre)
 
-    return ExtractionResponse(
-        **fields,
-        api_ok       = result.api_ok,
-        api_error    = result.api_error,
-        fichero_json = nombre,
-    )
+    with open(ruta, "w", encoding="utf-8") as f:
+        json.dump(result.model_dump(), f, ensure_ascii=False, indent=2)
+
+    result.fichero_json = nombre
+    return result
