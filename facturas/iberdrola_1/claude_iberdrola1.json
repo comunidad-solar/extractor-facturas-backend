@@ -1,0 +1,330 @@
+{
+  "archivo_fuente": "iberdrola1.pdf",
+  "tipo_documento": "Factura de electricidad",
+  "numero_paginas": 4,
+  "emisor": {
+    "empresa": "IBERDROLA CLIENTES, S.A.U.",
+    "cif": "A-95758389",
+    "domicilio_fiscal": "C/ Tomás Redondo 1, 28033 Madrid",
+    "domicilio_social": "Plaza Euskadi 5, 48009 Bilbao",
+    "registro_mercantil": "Bizkaia, tomo 5448, folio 19, hoja BI-63981, inscripción 1ª",
+    "apartado_correos_remite": "61175, 28080 Madrid"
+  },
+  "cliente": {
+    "titular": "LORENA CAYON HERNANDEZ",
+    "nif": "52475326K",
+    "direccion_suministro": {
+      "calle": "Avda Picos de Europa, 15, Bajo",
+      "codigo_postal": "28229",
+      "municipio": "Villanueva del Pardillo",
+      "provincia": "Madrid"
+    }
+  },
+  "factura": {
+    "numero_factura": "21240709010502454",
+    "numero_contrato": "900278365",
+    "periodo_facturacion": {
+      "inicio": "2024-06-06",
+      "fin": "2024-06-30"
+    },
+    "dias_facturados": 24,
+    "fecha_emision": "2024-07-09",
+    "fecha_prevista_cobro": "2024-07-17",
+    "total": 118.60,
+    "moneda": "EUR"
+  },
+  "contrato": {
+    "plan": "Plan A Tu Medida Contratado - Plan Estable",
+    "potencia_punta_kw": 6.9,
+    "potencia_valle_kw": 6.9,
+    "peaje_acceso": "2.0TD",
+    "mercado": "Libre",
+    "segmento_tarifario": 1,
+    "cups": "ES0021000005745673XV",
+    "cups_formato_original": "ES 0021 0000 0574 5673 XV",
+    "numero_contador": "0000059777",
+    "numero_contrato_acceso": "000231262620",
+    "empresa_distribuidora": "i-DE, Redes Eléctricas Inteligentes, S.A.U.",
+    "web_distribuidora": "www.i-de.es/clientes",
+    "fecha_final_contrato": "2029-06-06",
+    "permanencia": false,
+    "precios_peajes_acceso_boe": "2023-12-25",
+    "energia_garantia_origen": "Renovable 100%"
+  },
+  "forma_pago": {
+    "tipo": "Domiciliación bancaria",
+    "iban": "ES58 0049 4321 8122 1002 ****",
+    "iban_nota": "Últimos 4 dígitos ocultos por seguridad",
+    "bic": "BSCHESMMXXX",
+    "codigo_mandato": "212661144000"
+  },
+  "resumen_economico": {
+    "energia": 109.26,
+    "descuentos_energia": -15.61,
+    "cargos_normativos": 0.15,
+    "servicios_y_otros": 4.22,
+    "iva": 20.58,
+    "total": 118.60
+  },
+  "detalle_energia": {
+    "potencia": {
+      "punta": {
+        "potencia_kw": 6.9,
+        "dias": 24,
+        "precio_eur_kw_dia": 0.113358,
+        "importe": 18.77
+      },
+      "valle": {
+        "potencia_kw": 6.9,
+        "dias": 24,
+        "precio_eur_kw_dia": 0.036831,
+        "importe": 6.10
+      },
+      "total_potencia": 24.87
+    },
+    "energia_consumida": {
+      "kwh": 728.65,
+      "precio_eur_kwh": 0.142855,
+      "importe": 104.09
+    },
+    "descuentos": [
+      {
+        "concepto": "Descuento sobre consumo 10%",
+        "porcentaje": 10,
+        "base": 104.09,
+        "importe": -10.41
+      },
+      {
+        "concepto": "Descuento sobre consumo 5%",
+        "porcentaje": 5,
+        "base": 104.09,
+        "importe": -5.20
+      }
+    ],
+    "compensacion_excedentes": {
+      "kwh": -303.31,
+      "precio_eur_kwh": 0.08,
+      "importe": -24.26,
+      "nota_legal": "Compensación de excedentes: ahorro en su factura por la energía vertida por su instalación a la red. El precio de la Energía facturada es diferente al precio de compensación de excedentes, ya que el primero incluye, además del precio de la energía, los peajes por el uso de las redes de transporte y distribución así como otros conceptos, todos ellos establecidos por la Normativa vigente."
+    }
+  },
+  "cargos_normativos": {
+    "financiacion_bono_social_fijo": {
+      "dias": 24,
+      "precio_eur_dia": 0.006282,
+      "importe": 0.15
+    },
+    "impuesto_electricidad": {
+      "porcentaje": 5.11269632,
+      "base": 89.24,
+      "importe": 4.56
+    },
+    "total_energia_bloque": 93.80,
+    "nota_legal_rdl_8_2023": "En virtud del Real Decreto-ley 8/2023, de 27 de diciembre de 2023, el impuesto especial sobre la electricidad aplicable a su factura no se encuentra reducido."
+  },
+  "servicios_y_otros": {
+    "alquiler_equipos_medida": {
+      "dias": 24,
+      "precio_eur_dia": 0.026557,
+      "importe": 0.64
+    },
+    "pack_iberdrola_hogar": {
+      "meses": 0.8,
+      "precio_eur_mes": 8.95,
+      "importe": 7.16
+    },
+    "descuento_pack_iberdrola_hogar": {
+      "porcentaje": 50,
+      "base": 7.16,
+      "importe": -3.58
+    },
+    "subtotal_servicios": 4.22,
+    "importe_total_base_iva": 98.02,
+    "iva": {
+      "porcentaje": 21,
+      "base": 98.02,
+      "importe": 20.58,
+      "nota_legal_rdl_8_2023": "En aplicación del Real Decreto-ley 8/2023, de 27 de diciembre de 2023, el IVA aplicable a su factura es el tipo general del 21%, debido a que el precio medio aritmético del mercado diario del mes anterior al del último día de consumo de su factura ha sido inferior a 45 €/MWh."
+    },
+    "total_factura": 118.60
+  },
+  "precios_unitarios": {
+    "potencia": {
+      "punta_eur_kw_dia": 0.113358,
+      "valle_eur_kw_dia": 0.036831
+    },
+    "energia": {
+      "consumida_eur_kwh": 0.142855,
+      "compensacion_excedentes_eur_kwh": 0.08
+    },
+    "otros": {
+      "bono_social_fijo_eur_dia": 0.006282,
+      "alquiler_contador_eur_dia": 0.026557,
+      "impuesto_electricidad_porcentaje": 5.11269632,
+      "iva_porcentaje": 21
+    }
+  },
+  "consumo": {
+    "total_kwh": 728.65,
+    "medio_diario_eur_factura": 4.94,
+    "medio_diario_eur_ultimo_mes": 4.94,
+    "medio_cp_referencia_kwh": 221.84,
+    "desagregado_kwh": {
+      "punta_p1": 107.00,
+      "llano_p2": 142.00,
+      "valle_p3": 510.00
+    },
+    "lecturas_fecha": "2024-06-30",
+    "lecturas_tipo": "Reales",
+    "lecturas_desagregadas_kwh": {
+      "punta": 23501,
+      "llano": 22865,
+      "valle": 45734
+    },
+    "potencias_maximas_demandadas_ultimo_ano": {
+      "p1_punta_kw": 8.66,
+      "p2_valle_kw": 11.15
+    }
+  },
+  "autoconsumo": {
+    "compensacion_excedentes": true,
+    "energia_compensada_kwh": 303.31,
+    "precio_compensacion_eur_kwh": 0.08,
+    "importe_compensado_eur": -24.26,
+    "solar_cloud": true,
+    "solar_cloud_app": "Iberdrola Clientes",
+    "energia_100_renovable": true,
+    "garantia_origen_cnmc": true
+  },
+  "peajes_acceso_sin_impuestos": {
+    "total": 25.14,
+    "potencia": 11.93,
+    "energia": 12.57,
+    "alquiler_contador": 0.64,
+    "impuestos_aplicables": "Impuesto Eléctrico e IVA u otros impuestos indirectos",
+    "nota": "Estos importes están englobados en el importe total de la factura (no representan coste adicional)."
+  },
+  "distribucion_coste_porcentaje": {
+    "energia": 57.6,
+    "peajes_transporte_distribucion": 13.9,
+    "impuestos": 21.2,
+    "alquiler_contador": 0.5,
+    "bono_social": 0.1,
+    "cargos_total": 6.7,
+    "cargos_detalle": {
+      "anualidades_deficit": 4.8,
+      "sobrecoste_no_peninsular": 1.8,
+      "renovables_cogeneracion_residuos": 0.1,
+      "otros": 0.0
+    },
+    "impuestos_y_cargos_totales": 27.9
+  },
+  "origen_electricidad_mix_2023": {
+    "texto_introductorio": "Si bien la energía eléctrica que llega a nuestros hogares es indistinguible de la que consumen nuestros vecinos u otros consumidores conectados al mismo sistema eléctrico, es posible conocer el origen de la producción de energía eléctrica equivalente a la que consume en el hogar.",
+    "iberdrola": {
+      "renovable": 50.7,
+      "cogeneracion_alta_eficiencia": 3.0,
+      "cc_gas_natural": 18.1,
+      "carbon": 2.9,
+      "fuel_gas": 1.1,
+      "nuclear": 19.9,
+      "otras_no_renovables": 4.3
+    },
+    "mix_nacional": {
+      "renovable": 50.8,
+      "cogeneracion_alta_eficiencia": 2.6,
+      "cc_gas_natural": 18.3,
+      "carbon": 1.5,
+      "fuel_gas": 1.2,
+      "nuclear": 20.9,
+      "otras_no_renovables": 4.7
+    }
+  },
+  "impacto_medioambiental": {
+    "escala": "A a G (A=mínimo impacto, G=máximo impacto, D=media nacional)",
+    "emisiones_co2_eq_g_kwh": {
+      "iberdrola": 134,
+      "media_nacional": 121,
+      "categoria_iberdrola": "E"
+    },
+    "residuos_radiactivos_alta_actividad_ug_kwh": {
+      "iberdrola": 487,
+      "media_nacional": 512,
+      "categoria_iberdrola": "D"
+    },
+    "etiquetado_global_2023": {
+      "categoria": "D",
+      "significado": "Impacto ambiental igual a la media nacional",
+      "texto_literal": "De acuerdo con el sistema de Garantía de Origen e Información al Consumidor, implantado por la Comisión Nacional de la Energía, Iberdrola informa que toda la electricidad comercializada en 2023 ha sido etiquetada en la categoría D que indica un impacto ambiental igual a la media nacional."
+    }
+  },
+  "observaciones_legales_y_promociones": {
+    "rdl_8_2023_impuesto_electrico": "En virtud del Real Decreto-ley 8/2023, de 27 de diciembre de 2023, el impuesto especial sobre la electricidad aplicable a su factura no se encuentra reducido.",
+    "rdl_8_2023_iva": "En aplicación del Real Decreto-ley 8/2023, de 27 de diciembre de 2023, el IVA aplicable a su factura es el tipo general del 21%, debido a que el precio medio aritmético del mercado diario del mes anterior al del último día de consumo de su factura ha sido inferior a 45 €/MWh.",
+    "promocion_bienvenida": {
+      "descripcion": "Descuento del 50% en el Pack Iberdrola Hogar durante los 4 primeros meses",
+      "porcentaje": 50,
+      "duracion_meses": 4,
+      "producto": "Pack Iberdrola Hogar"
+    },
+    "comparador_cnmc": "https://comparador.cnmc.gob.es"
+  },
+  "reclamaciones": {
+    "texto_literal": "Para reclamaciones relacionadas con el contrato de suministro o la facturación puede dirigirse a cualquiera de los canales de atención indicados en esta factura, o en el Apartado de Correos 61090, 28080 de Madrid. Si su reclamación no ha sido resuelta o ha superado el plazo de 30 días, puede dirigirse a la Junta Arbitral de Consumo Autonómica de Madrid (teléfono de atención al cliente 913105903). Además, puede acudir a los órganos competentes en materia de Consumo y/o Energía de dicha Comunidad Autónoma.",
+    "apartado_correos": "61090, 28080 Madrid",
+    "junta_arbitral_consumo_madrid": "913 105 903",
+    "plazo_dias": 30
+  },
+  "contactos": {
+    "digital": {
+      "web": "www.iberdrola.es",
+      "area_cliente": "Mi Área Cliente (www.iberdrola.es)",
+      "email": "clientes@tuiberdrola.es",
+      "app": "Iberdrola Clientes",
+      "web_consejos_eficiencia": "www.iberdrola.es/informacion/consejos"
+    },
+    "telefonos": {
+      "atencion_cliente": ["900 225 235", "91 919 52 73"],
+      "averias_zona": "900 171 171",
+      "reparaciones_hogar": ["900 22 45 22", "91 919 52 74"],
+      "smart_solar_autoconsumo": "900 92 33 33"
+    },
+    "oficinas": [
+      "Calle Santiago Apóstol 3, 28220 Majadahonda",
+      "Calle Acacias 8, 28231 Las Rozas de Madrid"
+    ],
+    "recursos_externos": {
+      "origen_electricidad_cnmc": "gdo.cnmc.es",
+      "comparador_ofertas_cnmc": "https://comparador.cnmc.gob.es",
+      "junta_arbitral_consumo_madrid": "913 105 903",
+      "apartado_correos_reclamaciones": "61090, 28080 Madrid"
+    }
+  },
+  "advertencias": [
+    {
+      "tipo": "coherencia_consumo",
+      "descripcion": "El consumo desagregado por franjas (P1 107,00 + P2 142,00 + P3 510,00 = 759,00 kWh) no coincide con el consumo total facturado (728,65 kWh). Diferencia: 30,35 kWh. La discrepancia proviene del propio PDF; puede deberse a arreglos por autoconsumo instantáneo, perdidas, o redondeos en la lectura desagregada. No se ha inventado ningún valor."
+    }
+  ],
+  "metadatos_documento": {
+    "codigo_barras": "09002783650033910282292817700010109074",
+    "codigo_postal_distribucion": "DY 910 M S 0900278365 0 1 08",
+    "codigos_internos_por_pagina": {
+      "pagina_1": "ind-AY-ele-005 006384 025537 20240709",
+      "pagina_2": "97100049",
+      "pagina_4": ["98000049", "08 EGEN SGCOM 1586"]
+    },
+    "certificaciones_emisor": [
+      "AENOR - Gestión de Reclamaciones ISO 10002",
+      "AENOR - Empresa Registrada UNE-EN-ISO 9001 (ER-0493/2010)",
+      "IQNet",
+      "Empresa Adherida",
+      "Arbitraje de Consumo"
+    ],
+    "certificacion_papel": {
+      "estandar": "PEFC",
+      "descripcion": "Bosques gestionados de forma sostenible y fuentes controladas",
+      "web": "www.pefc.es"
+    }
+  }
+}

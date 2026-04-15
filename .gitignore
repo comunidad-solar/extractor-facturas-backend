@@ -1,5 +1,10 @@
 # ── Markdown notes (documentación local, no versionada) ──────────────────────
 *.md
+!log.md
+!docs/**/*.md
+.env
+resultados/ES0021000013483679RH1F_06-07-2025_04-08-2025.json
+/resultados
 !docs/**/*.md
 
 # Explícitos (redundantes con *.md pero documentan intención)

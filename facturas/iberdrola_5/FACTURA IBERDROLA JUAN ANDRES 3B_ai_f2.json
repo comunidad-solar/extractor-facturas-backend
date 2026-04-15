@@ -1,0 +1,245 @@
+{
+  "archivo_fuente": "FACTURA IBERDROLA JUAN ANDRES 3B.pdf",
+  "factura_dentro_del_pdf": "2 de 2",
+  "tipo_documento": "Factura de electricidad con garantía de origen",
+  "numero_paginas": 4,
+  "paginas_disponibles_en_este_pdf": "1-2 (portada + detalle + info adicional; faltan páginas 3-4 con mix energético)",
+  "emisor": {
+    "empresa": "IBERDROLA CLIENTES, S.A.U.",
+    "cif": "A-95758389",
+    "domicilio_fiscal": "C/ Tomás Redondo 1, 28033 Madrid",
+    "domicilio_social": "Plaza Euskadi 5, 48009 Bilbao",
+    "registro_mercantil": "Bizkaia, tomo 5448, folio 19, hoja BI-63981, inscripción 1ª",
+    "apartado_correos_remite": "61175, 28080 Madrid"
+  },
+  "cliente": {
+    "titular": "AGROSERVI GASAN S.L.U",
+    "cif": "B02572550",
+    "direccion_fiscal": {
+      "calle": "C/ Pontevedra, 1, 4º 3",
+      "codigo_postal": "02005",
+      "municipio": "Albacete",
+      "provincia": "Albacete"
+    },
+    "direccion_suministro": {
+      "calle": "C/ Atenas, Parcela 192, Bajo A",
+      "codigo_postal": "02006",
+      "municipio": "Albacete",
+      "provincia": "Albacete"
+    }
+  },
+  "factura": {
+    "numero_factura": "21250912010183436",
+    "numero_contrato": "737578348",
+    "periodo_facturacion": {
+      "inicio": "2025-08-13",
+      "fin": "2025-09-09"
+    },
+    "dias_facturados": 27,
+    "fecha_emision": "2025-09-12",
+    "fecha_prevista_cobro": "2025-09-20",
+    "total": 79.12,
+    "moneda": "EUR"
+  },
+  "contrato": {
+    "plan": null,
+    "potencia_punta_kw": 10.392,
+    "potencia_valle_kw": 10.392,
+    "peaje_acceso": "2.0TD",
+    "mercado": "Libre",
+    "segmento_tarifario": 1,
+    "cups": "ES0021000015498875NT",
+    "cups_formato_original": "ES 0021 0000 1549 8875 NT",
+    "numero_contador": "0206508278",
+    "numero_contrato_acceso": "000737775361",
+    "empresa_distribuidora": "i-DE, Redes Eléctricas Inteligentes, S.A.U.",
+    "fecha_final_contrato": "2026-03-08",
+    "permanencia": false,
+    "precios_peajes_acceso_boe": "2024-12-16",
+    "energia_garantia_origen": "Renovable 100%"
+  },
+  "forma_pago": {
+    "tipo": "Domiciliación bancaria",
+    "iban": "ES89 3190 0073 6445 4245 ****",
+    "iban_nota": "Últimos 4 dígitos ocultos por seguridad",
+    "bic": "BCOEESMM190",
+    "codigo_mandato": "281766672000"
+  },
+  "resumen_economico": {
+    "energia": 56.56,
+    "descuentos_energia": 0,
+    "cargos_normativos": 0.34,
+    "servicios_y_otros": 8.49,
+    "iva": 13.73,
+    "total": 79.12
+  },
+  "detalle_energia": {
+    "potencia": {
+      "punta": { "potencia_kw": 10.392, "dias": 27, "precio_eur_kw_dia": 0.088327, "importe": 24.78 },
+      "valle": { "potencia_kw": 10.392, "dias": 27, "precio_eur_kw_dia": 0.002587, "importe": 0.73 },
+      "total_potencia": 25.51
+    },
+    "energia_consumida": {
+      "kwh": 197,
+      "precio_eur_kwh": 0.143569,
+      "importe": 28.28
+    },
+    "descuentos": [],
+    "compensacion_excedentes": null
+  },
+  "cargos_normativos": {
+    "financiacion_bono_social_fijo": {
+      "dias": 27,
+      "precio_eur_dia": 0.012742,
+      "importe": 0.34
+    },
+    "impuesto_electricidad": {
+      "porcentaje": 5.11269632,
+      "base": 54.13,
+      "importe": 2.77
+    },
+    "total_energia_bloque": 56.90
+  },
+  "servicios_y_otros": {
+    "alquiler_equipos_medida": {
+      "dias": 27,
+      "precio_eur_dia": 0.044712,
+      "importe": 1.21
+    },
+    "asistencia_pymes_iberdrola": {
+      "meses": 0.88,
+      "precio_eur_mes": 8.27,
+      "importe": 7.28,
+      "nota": "Nuevo producto para PYMES, no aparece en facturas residenciales"
+    },
+    "subtotal_servicios": 8.49,
+    "importe_total_base_iva": 65.39,
+    "iva_split": [
+      {
+        "tipo": "IVA general",
+        "porcentaje": 21,
+        "base": 65.39,
+        "importe": 13.73,
+        "nota_legal": null
+      }
+    ],
+    "iva_total": 13.73,
+    "total_factura": 79.12
+  },
+  "precios_unitarios": {
+    "potencia": {
+      "punta_eur_kw_dia": 0.088327,
+      "valle_eur_kw_dia": 0.002587
+    },
+    "energia": {
+      "consumida_eur_kwh": 0.143569
+    },
+    "otros": {
+      "bono_social_fijo_eur_dia": 0.012742,
+      "alquiler_contador_eur_dia": 0.044712,
+      "impuesto_electricidad_porcentaje": 5.11269632,
+      "iva_porcentaje": 21
+    }
+  },
+  "consumo": {
+    "total_kwh": 197,
+    "medio_diario_eur_factura": 2.93,
+    "medio_diario_eur_ultimos_14_meses": 3.76,
+    "medio_cp_referencia_kwh": 224.68,
+    "desagregado_kwh": {
+      "punta_p1": 50,
+      "llano_p2": 81,
+      "valle_p3": 66
+    },
+    "lecturas_fecha": "2025-09-09",
+    "lecturas_tipo": "Reales",
+    "lecturas_desagregadas_kwh": {
+      "punta": 4730,
+      "llano": 3527,
+      "valle": 1594
+    },
+    "potencias_maximas_demandadas_ultimo_ano": {
+      "p1_punta_kw": 4.79,
+      "p2_valle_kw": 4.7
+    }
+  },
+  "autoconsumo": {
+    "compensacion_excedentes": false,
+    "solar_cloud": false,
+    "energia_100_renovable": true,
+    "garantia_origen_cnmc": true
+  },
+  "peajes_acceso_sin_impuestos": {
+    "total": 29.56,
+    "potencia": 21.24,
+    "energia": 7.11,
+    "alquiler_contador": 1.21,
+    "impuestos_aplicables": "Impuesto Eléctrico e IVA u otros impuestos indirectos",
+    "nota": "Estos importes están englobados en el importe total de la factura (no representan coste adicional)."
+  },
+  "distribucion_coste_porcentaje": {
+    "energia": 41.4,
+    "peajes_transporte_distribucion": 26.6,
+    "impuestos": 20.9,
+    "alquiler_contador": 1.5,
+    "bono_social": 0.4,
+    "cargos_total": 9.2,
+    "cargos_detalle": {
+      "anualidades_deficit": 5.9,
+      "sobrecoste_no_peninsular": 2.1,
+      "renovables_cogeneracion_residuos": 1.2,
+      "otros": 0.0
+    },
+    "impuestos_y_cargos_totales": 30.1
+  },
+  "origen_electricidad_mix": null,
+  "impacto_medioambiental": null,
+  "observaciones_legales_y_promociones": {
+    "mensaje_verde": "Gracias por elegir energía verde, energía 100% renovable. Es sostenible. Procede de recursos renovables. Es respetuosa con el medio ambiente. Con tu elección cuidas el planeta con la energía que cuida el futuro de todos."
+  },
+  "reclamaciones": {
+    "texto_literal": "Para reclamaciones relacionadas con el contrato de suministro o la facturación puede dirigirse a cualquiera de los canales de atención indicados en esta factura, o en el Apartado de Correos 61090, 28080 de Madrid. Si su reclamación no ha sido resuelta o ha superado el plazo de 30 días, puede dirigirse a la Junta Arbitral de Consumo Autonómica de Castilla-La Mancha (teléfono de contacto: 925267099). Además, puede acudir a los órganos competentes en materia de Consumo y/o Energía de dicha Comunidad Autónoma.",
+    "apartado_correos": "61090, 28080 Madrid",
+    "junta_arbitral_consumo": {
+      "comunidad_autonoma": "Castilla-La Mancha",
+      "telefono": "925 267 099"
+    },
+    "plazo_dias": 30
+  },
+  "contactos": {
+    "digital": {
+      "web": "www.iberdrola.es",
+      "email": "clientes@tuiberdrola.es",
+      "app": "Iberdrola Clientes"
+    },
+    "telefonos": {
+      "atencion_cliente": ["900 400 408", "925 05 99 06"],
+      "averias_zona": "900 171 171",
+      "reparaciones_hogar": ["900 22 45 22", "925 05 99 07"]
+    },
+    "oficinas": [
+      "Rua Pena Trevinca 37, 32005 Ourense",
+      "Calle Celso Emilio Ferreiro 40, 32004 Ourense"
+    ]
+  },
+  "advertencias": [
+    {
+      "tipo": "pdf_multiple_facturas",
+      "descripcion": "Este PDF contiene DOS facturas del mismo titular. Esta es la segunda (contrato 737578348, C/Atenas, 2.0TD, 79,12 €). La primera está en las páginas 1-2 del PDF."
+    },
+    {
+      "tipo": "paginas_incompletas",
+      "descripcion": "Sólo están disponibles las páginas 1-2 de esta factura (de las 4 originales). Faltan: mix energético (2023) e impacto ambiental."
+    },
+    {
+      "tipo": "ubicacion_oficinas_inconsistente",
+      "descripcion": "Las oficinas de atención listadas son de Ourense (RUA PENA TREVINCA 37, CALLE CELSO EMILIO FERREIRO 40) pero la factura es de Albacete. Podría ser un error del PDF original o una plantilla reusada."
+    }
+  ],
+  "metadatos_documento": {
+    "codigo_barras": "0737578348002499902005020030002020122095",
+    "codigo_postal_distribucion": "IN 999 M C 0737578348 0 I 08 — ind-AY-ele-002 001254 005015 20250912 — H-14",
+    "certificaciones_emisor": ["AENOR - Gestión de Reclamaciones", "AENOR - Gestión de la Calidad", "Establecimiento Adherido", "Arbitraje de Consumo"],
+    "certificacion_papel": "PEFC"
+  }
+}

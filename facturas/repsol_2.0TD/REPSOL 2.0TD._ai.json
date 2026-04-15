@@ -1,0 +1,344 @@
+{
+  "archivo_fuente": "REPSOL 2.0TD..pdf",
+  "tipo_documento": "Factura de luz",
+  "numero_paginas": 4,
+
+  "emisor": {
+    "empresa": "Repsol Comercializadora de Electricidad y Gas, S.L.U.",
+    "nif": "B39540760",
+    "domicilio_fiscal": "C/Isabel Torres, 19 - 39011 Santander",
+    "domicilio_social": "C/Isabel Torres, 19 - 39011 Santander",
+    "registro_mercantil": "T. 1007 - Fol.95 - Sec.8\u00aa - H.S.- 13611 (Cantabria)",
+    "apartado_correos_remite": null
+  },
+
+  "cliente": {
+    "titular": "ALVARO SARABIA MARIN",
+    "nif": "48454248X",
+    "direccion_suministro": {
+      "calle": "CL SALZILLO 15 BAJO",
+      "codigo_postal": "30562",
+      "municipio": "CEUTI",
+      "provincia": "MURCIA"
+    }
+  },
+
+  "factura": {
+    "numero_factura": "61074089390",
+    "numero_contrato": "4302477877",
+    "periodo_facturacion": {
+      "inicio": "2025-10-20",
+      "fin": "2025-11-20"
+    },
+    "dias_facturados": 31,
+    "fecha_emision": "2025-11-22",
+    "fecha_prevista_cobro": "2025-11-23",
+    "total": 76.81,
+    "moneda": "EUR"
+  },
+
+  "contrato": {
+    "plan": "Tarifa Precio Fijo",
+    "potencia_punta_kw": 5.75,
+    "potencia_valle_kw": 5.75,
+    "peaje_acceso": "2.0TD",
+    "mercado": "Libre",
+    "segmento_tarifario": 1,
+    "cups": "ES0021000006015493NR1F",
+    "cups_formato_original": "ES 0021 0000 0601 5493 NR1F",
+    "numero_contador": "0045825839",
+    "numero_contrato_acceso": "141227217",
+    "empresa_distribuidora": "I-DE Redes El\u00e9ctricas Inteligentes, SAU",
+    "web_distribuidora": "https://www.i-de.es/consumidores/web/guest",
+    "fecha_final_contrato": "2026-06-28",
+    "permanencia": null,
+    "precios_peajes_acceso_boe": null,
+    "energia_garantia_origen": "Renovable 79,1% (mix Repsol 2024)"
+  },
+
+  "forma_pago": {
+    "tipo": "Recibo domiciliado",
+    "iban": "*2929",
+    "iban_nota": "S\u00f3lo se muestran los \u00faltimos 4 d\u00edgitos de la cuenta bancaria",
+    "bic": null,
+    "codigo_mandato": "CPR: 9050794 / Emisor: 39540760-000 / Referencia: 6107408939095 / Identificaci\u00f3n: 221125"
+  },
+
+  "resumen_economico": {
+    "termino_fijo": 25.30,
+    "energia": 29.91,
+    "servicios": 4.20,
+    "otros_conceptos": 1.23,
+    "impuestos": 16.17,
+    "total": 76.81
+  },
+
+  "detalle_energia": {
+    "potencia": {
+      "periodo_1_punta": {
+        "potencia_kw": 5.75,
+        "dias": 31,
+        "precio_eur_kw_dia": 0.070958904,
+        "importe": 12.65
+      },
+      "periodo_2_valle": {
+        "potencia_kw": 5.75,
+        "dias": 31,
+        "precio_eur_kw_dia": 0.070958904,
+        "importe": 12.65
+      },
+      "total_potencia": 25.30
+    },
+    "energia_consumida": {
+      "kwh": 205.0,
+      "precio_eur_kwh": 0.1459,
+      "importe": 29.91,
+      "nota": "Tarifa Precio Fijo: precio \u00fanico para todos los periodos (P1/P2/P3). Linea facturada: 205 kWh x 0,1459 \u20ac/kWh = 29,91 \u20ac (R12 vinculante).",
+      "verificacion_r12": {
+        "kwh_x_precio": 29.9095,
+        "importe_factura": 29.91,
+        "diferencia_eur": 0.0005,
+        "dentro_tolerancia": true
+      }
+    },
+    "descuentos": [],
+    "compensacion_excedentes": null
+  },
+
+  "cargos_normativos": {
+    "financiacion_bono_social_fijo": {
+      "dias": 31,
+      "precio_eur_dia": 0.012742,
+      "importe": 0.40
+    },
+    "impuesto_electricidad": {
+      "porcentaje": 5.11269632,
+      "base": 55.61,
+      "importe": 2.84,
+      "nota_base": "Base IE = potencia (25,30) + energ\u00eda (29,91) + bono social (0,40) = 55,61 \u20ac"
+    },
+    "total_energia_bloque": null,
+    "nota_legal_rdl_8_2023": null
+  },
+
+  "servicios_y_otros": {
+    "alquiler_equipos_medida": {
+      "dias": 31,
+      "precio_eur_dia": 0.026774,
+      "importe": 0.83
+    },
+    "tu_asistente_24h": {
+      "precio_eur_mes": 4.12,
+      "meses_equivalentes": 12,
+      "precio_eur_anual": 49.44,
+      "dias": 31,
+      "importe": 4.20
+    },
+    "subtotal_servicios": 4.20,
+    "subtotal_otros_conceptos": 1.23,
+    "importe_total_base_iva": 63.48,
+    "iva": {
+      "porcentaje": 21,
+      "base": 63.48,
+      "importe": 13.33,
+      "nota_legal_rdl_8_2023": null
+    },
+    "total_factura": 76.81
+  },
+
+  "precios_unitarios": {
+    "potencia": {
+      "periodo1_punta_eur_kw_dia": 0.070958904,
+      "periodo2_valle_eur_kw_dia": 0.070958904
+    },
+    "energia": {
+      "consumida_eur_kwh": 0.1459,
+      "nota": "Precio \u00fanico para todos los periodos (Tarifa Precio Fijo)",
+      "compensacion_excedentes_eur_kwh": null
+    },
+    "otros": {
+      "bono_social_fijo_eur_dia": 0.012742,
+      "alquiler_contador_eur_dia": 0.026774,
+      "impuesto_electricidad_porcentaje": 5.11269632,
+      "iva_porcentaje": 21
+    }
+  },
+
+  "consumo": {
+    "total_kwh_facturado": 205.0,
+    "medio_cp_referencia_kwh": 221.2,
+    "desagregado_kwh": {
+      "punta_p1": 64.0,
+      "llano_p2": 53.0,
+      "valle_p3": 88.0,
+      "total_desagregado": 205.0,
+      "nota_r12": "Total desagregado coincide con el facturado (sin autoconsumo)"
+    },
+    "lecturas_fecha": "2025-11-20",
+    "lecturas_tipo": "Reales",
+    "lecturas_desagregadas_kwh": {
+      "punta_actual": 7266,
+      "punta_anterior": 7202,
+      "punta_consumo": 64,
+      "llano_actual": 6669,
+      "llano_anterior": 6616,
+      "llano_consumo": 53,
+      "valle_actual": 6638,
+      "valle_anterior": 6550,
+      "valle_consumo": 88
+    },
+    "potencias_maximas_demandadas_ultimo_ano": {
+      "p1_punta_kw": 7.292,
+      "p2_valle_kw": 7.232
+    }
+  },
+
+  "autoconsumo": {
+    "compensacion_excedentes": false,
+    "energia_compensada_kwh": null,
+    "precio_compensacion_eur_kwh": null,
+    "importe_compensado_eur": null,
+    "solar_cloud": null,
+    "solar_cloud_app": null,
+    "energia_100_renovable": false,
+    "garantia_origen_cnmc": false
+  },
+
+  "peajes_acceso_sin_impuestos": {
+    "por_potencia": {
+      "calculo": "5,75 kW x 31 d\u00edas x 26,93055 \u20ac/kWa\u00f1o + 5,75 kW x 31 d\u00edas x 0,697588 \u20ac/kWa\u00f1o",
+      "importe": 13.49
+    },
+    "por_energia": {
+      "calculo": "64 kWh x 0,092539 \u20ac/kWh + 53 kWh x 0,028201 \u20ac/kWh + 88 kWh x 0,002994 \u20ac/kWh",
+      "importe": 7.67
+    },
+    "cuota_comercializacion_termino_fijo": 11.81,
+    "alquiler_contador": 0.83,
+    "total_peajes_distribucion": 21.16,
+    "nota": "El T\u00e9rmino fijo (25,30 \u20ac) = Peaje potencia (13,49 \u20ac) + Cuota comercializaci\u00f3n Repsol (11,81 \u20ac)"
+  },
+
+  "distribucion_coste_porcentaje": {
+    "energia": 50.29,
+    "peajes_transporte_distribucion": 18.89,
+    "impuestos": 21.05,
+    "alquiler_contador": 1.08,
+    "bono_social": null,
+    "cargos_total": 8.68,
+    "cargos_detalle": {
+      "tnp_territorios_no_peninsulares": 22.36,
+      "deficit": 63.92,
+      "recore_renovables_cogeneracion_residuos": 13.06,
+      "otros": 0.66
+    },
+    "total_suma": 99.99,
+    "nota": "Cargos desglosados en % sobre el total de cargos, no sobre la factura"
+  },
+
+  "origen_electricidad_mix_2024": {
+    "texto_introductorio": "Obtén más información sobre el origen de tu electricidad en el siguiente enlace gdo.cnmc.es",
+    "repsol_electricidad_y_gas": {
+      "renovable": 79.1,
+      "cogeneracion_alta_eficiencia": 0.4,
+      "cc_gas_natural": 7.0,
+      "carbon": 2.1,
+      "fuel_gas": 0.5,
+      "nuclear": 8.7,
+      "otras_no_renovables": 2.2,
+      "suma_verificacion": 100.0
+    },
+    "mix_nacional": {
+      "renovable": 56.5,
+      "cogeneracion_alta_eficiencia": 1.7,
+      "cc_gas_natural": 14.2,
+      "carbon": 1.1,
+      "fuel_gas": 1.1,
+      "nuclear": 20.2,
+      "otras_no_renovables": 5.2,
+      "suma_verificacion": 100.0
+    }
+  },
+
+  "impacto_medioambiental": {
+    "escala": "A a G (A=m\u00ednimo impacto, D=media nacional, G=m\u00e1ximo impacto)",
+    "anno_referencia": 2024,
+    "emisiones_co2_eq_g_kwh": {
+      "repsol": 62,
+      "media_nacional": 102,
+      "categoria_repsol": "B"
+    },
+    "residuos_radiactivos_alta_actividad_ug_kwh": {
+      "repsol": 192,
+      "media_nacional": 446,
+      "categoria_repsol": "B"
+    },
+    "etiquetado_global_2024": {
+      "categoria": "B",
+      "texto_literal": "La letra 'A' corresponde al m\u00ednimo impacto ambiental, la 'D' a la media de generaci\u00f3n nacional y la 'G' al m\u00e1ximo impacto ambiental."
+    }
+  },
+
+  "observaciones_legales_y_promociones": {
+    "rdl_8_2023_impuesto_electrico": null,
+    "rdl_8_2023_iva": null,
+    "sistema_arbitral_consumo": "Repsol Comercializadora de Electricidad y Gas S.L.U. est\u00e1 adherida al Sistema Arbitral de Consumo en todo el territorio nacional, con el objeto de facilitar un medio alternativo y gratuito de resoluci\u00f3n de conflictos por las discrepancias que puedan surgir con sus clientes.",
+    "juntas_arbitrales_autonómicas": "https://www.consumo.gob.es/es/consumo/juntasArbitrales/autonomica",
+    "promocion_activa": "Generando saldo con Waylet, lo puedes descontar del importe en tus pr\u00f3ximas facturas.",
+    "informacion_cliente": "Sin informaci\u00f3n.",
+    "comparador_cnmc": "https://comparador.cnmc.gob.es"
+  },
+
+  "reclamaciones": {
+    "texto_literal": "Asimismo, Repsol Comercializadora de Electricidad y Gas S.L.U. est\u00e1 adherida al Sistema Arbitral de Consumo en todo el territorio nacional, con el objeto de facilitar un medio alternativo y gratuito de resoluci\u00f3n de conflictos por las discrepancias que puedan surgir con sus clientes. Adem\u00e1s, puedes acudir a los \u00f3rganos competentes en materia de consumo y/ o energ\u00eda, tel\u00e9fonos juntas arbitrales auton\u00f3micas en https://www.consumo.gob.es/es/consumo/juntasArbitrales/autonomica.",
+    "email": "gestion.clientes@repsolluzygas.com",
+    "direccion_postal": "C/Isabel Torres N\u00ba19, 39011 Santander",
+    "apartado_correos": null,
+    "junta_arbitral_consumo": "Ver https://www.consumo.gob.es/es/consumo/juntasArbitrales/autonomica",
+    "plazo_dias": null
+  },
+
+  "contactos": {
+    "digital": {
+      "web": null,
+      "area_cliente": "Área Cliente Repsol",
+      "email": "gestion.clientes@repsolluzygas.com",
+      "app": "Repsol Vivit",
+      "web_consejos_eficiencia": null
+    },
+    "telefonos": {
+      "atencion_cliente": ["900 11 88 66"],
+      "averias_red_electrica": "900 17 11 71",
+      "reparaciones_hogar": null,
+      "smart_solar_autoconsumo": null
+    },
+    "oficinas": ["C/Isabel Torres N\u00ba19, 39011 Santander (direcci\u00f3n postal)"],
+    "recursos_externos": {
+      "portal_distribuidora_consumo": "https://www.i-de.es/consumidores/web/guest",
+      "origen_electricidad_cnmc": "gdo.cnmc.es",
+      "comparador_ofertas_cnmc": "https://comparador.cnmc.gob.es",
+      "juntas_arbitrales_autonomicas": "https://www.consumo.gob.es/es/consumo/juntasArbitrales/autonomica"
+    }
+  },
+
+  "advertencias": [],
+
+  "metadatos_documento": {
+    "localizador_pago": {
+      "cpr": "9050794",
+      "emisor": "39540760-000",
+      "referencia": "6107408939095",
+      "identificacion": "221125"
+    },
+    "codigo_barras": null,
+    "codigo_postal_distribucion": null,
+    "codigos_internos_por_pagina": {
+      "pagina_1": null,
+      "pagina_2": "P\u00e1gina 2/4",
+      "pagina_3": "P\u00e1gina 3/4",
+      "pagina_4": "P\u00e1gina 4/4"
+    },
+    "certificaciones_emisor": [],
+    "certificacion_papel": null
+  }
+}

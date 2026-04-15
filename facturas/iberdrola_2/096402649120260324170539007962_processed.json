@@ -1,0 +1,76 @@
+{
+  "cups": "ES0021000008782164NW",
+  "periodo_inicio": "17/02/2026",
+  "periodo_fin": "19/03/2026",
+  "dias_facturados": "30",
+  "comercializadora": "IBERDROLA CLIENTES, S.A.U",
+  "distribuidora": "i-DE, Redes Eléctricas Inteligentes, S.A.U.",
+  "tarifa_acceso": "2.0TD",
+
+  "pp_p1": 0.113621,
+  "pp_p2": 0.053667,
+  "pp_p3": null,
+  "pp_p4": null,
+  "pp_p5": null,
+  "pp_p6": null,
+  "pe_p1": 0.156207,
+  "pe_p2": null,
+  "pe_p3": null,
+  "pe_p4": null,
+  "pe_p5": null,
+  "pe_p6": null,
+  "pot_p1_kw": 4.6,
+  "pot_p2_kw": 4.6,
+  "pot_p3_kw": 0,
+  "pot_p4_kw": 0,
+  "pot_p5_kw": 0,
+  "pot_p6_kw": 0,
+
+  "energia_facturada_kwh": 326,
+  "consumo_p1_kwh": 94,
+  "consumo_p2_kwh": 111,
+  "consumo_p3_kwh": 121,
+  "consumo_p4_kwh": 0,
+  "consumo_p5_kwh": 0,
+  "consumo_p6_kwh": 0,
+
+  "imp_ele": null,
+  "imp_ele_eur_kwh": 0.001,
+  "iva": 21,
+  "iva_reducido": 10,
+  "alq_eq_dia": 0.02663,
+  "bono_social": 0.019121,
+
+  "compensacion_excedentes_kwh": null,
+  "compensacion_excedentes_importe_eur": null,
+
+  "descuentos": {
+    "Descuento sobre consumo 5%": -2.55,
+    "Descuento sobre consumo 15%": -7.64
+  },
+
+  "importe_factura": 82.08,
+
+  "otros": {
+    "Pack Iberdrola": 8.27
+  },
+
+  "validacion_cuadre": {
+    "potencia_total_calc": 23.09,
+    "energia_facturada_calc": 50.92,
+    "descuentos_total_calc": -10.19,
+    "compensacion_excedentes_calc": 0,
+    "bono_social_calc": 0.57,
+    "impuesto_electricidad_calc": 0.33,
+    "alquiler_contador_calc": 0.80,
+    "otros_calc": 8.27,
+    "iva_total_calc": 8.29,
+    "suma_conceptos": 82.08,
+    "importe_factura_pdf": 82.08,
+    "diferencia_eur": 0.00,
+    "tolerancia_eur": 0.02,
+    "cuadra": true
+  },
+
+  "error": null
+}

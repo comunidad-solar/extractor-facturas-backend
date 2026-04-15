@@ -1,0 +1,253 @@
+{
+  "archivo_fuente": "FACTURA IBERDROLA JUAN ANDRES 3B.pdf",
+  "factura_dentro_del_pdf": "1 de 2",
+  "tipo_documento": "Factura de electricidad",
+  "numero_paginas": 4,
+  "paginas_disponibles_en_este_pdf": "1-2 (portada + detalle; faltan páginas 3-4 de información adicional, reclamaciones y mix energético)",
+  "emisor": {
+    "empresa": "IBERDROLA CLIENTES, S.A.U.",
+    "cif": "A-95758389",
+    "domicilio_fiscal": "C/ Tomás Redondo 1, 28033 Madrid",
+    "domicilio_social": "Plaza Euskadi 5, 48009 Bilbao",
+    "registro_mercantil": "Bizkaia, tomo 5448, folio 19, hoja BI-63981, inscripción 1ª",
+    "apartado_correos_remite": "61175, 28080 Madrid"
+  },
+  "cliente": {
+    "titular": "AGROSERVI GASAN S.L.U",
+    "cif": null,
+    "direccion_fiscal": {
+      "calle": "C/ Pontevedra, 1, 4º 3",
+      "codigo_postal": "02005",
+      "municipio": "Albacete",
+      "provincia": "Albacete"
+    },
+    "direccion_suministro": {
+      "calle": "C/ Dublin, 132-D, Bajo",
+      "codigo_postal": "02006",
+      "municipio": "Albacete",
+      "provincia": "Albacete"
+    }
+  },
+  "factura": {
+    "numero_factura": "21251003010136929",
+    "numero_contrato": "783126943",
+    "periodo_facturacion": {
+      "inicio": "2025-08-31",
+      "fin": "2025-09-30"
+    },
+    "dias_facturados": 30,
+    "fecha_emision": "2025-10-03",
+    "fecha_prevista_cobro": "2025-10-03",
+    "total": 276.35,
+    "moneda": "EUR"
+  },
+  "contrato": {
+    "plan": "Plan A Tu Medida Contratado - Plan Estable",
+    "potencias_por_franja_kw": {
+      "p1": 25,
+      "p2": 25,
+      "p3": 25,
+      "p4": 25,
+      "p5": 25,
+      "p6": 50
+    },
+    "peaje_acceso": "3.0TD",
+    "mercado": null,
+    "segmento_tarifario": null,
+    "cups": null,
+    "numero_contador": "0047933790",
+    "numero_contrato_acceso": null,
+    "empresa_distribuidora": "i-DE, Redes Eléctricas Inteligentes, S.A.U.",
+    "fecha_final_contrato": null,
+    "permanencia": null,
+    "energia_garantia_origen": "Renovable 100%"
+  },
+  "forma_pago": {
+    "tipo": null,
+    "iban": null,
+    "bic": null,
+    "codigo_mandato": null,
+    "nota": "Información de pago en página 3 original no disponible en este PDF"
+  },
+  "resumen_economico": {
+    "energia": 248.53,
+    "descuentos_energia": -26.46,
+    "cargos_normativos": 0.38,
+    "servicios_y_otros": 5.94,
+    "iva": 47.96,
+    "total": 276.35
+  },
+  "detalle_energia": {
+    "potencia_por_franja": {
+      "p1": { "potencia_kw": 25, "dias": 30, "precio_eur_kw_dia": 0.057178, "importe": 42.88 },
+      "p2": { "potencia_kw": 25, "dias": 30, "precio_eur_kw_dia": 0.030959, "importe": 23.22 },
+      "p3": { "potencia_kw": 25, "dias": 30, "precio_eur_kw_dia": 0.018438, "importe": 13.83 },
+      "p4": { "potencia_kw": 25, "dias": 30, "precio_eur_kw_dia": 0.014219, "importe": 10.66 },
+      "p5": { "potencia_kw": 25, "dias": 30, "precio_eur_kw_dia": 0.008411, "importe": 6.31 },
+      "p6": { "potencia_kw": 50, "dias": 30, "precio_eur_kw_dia": 0.005671, "importe": 8.51 },
+      "total_potencia": 105.41
+    },
+    "energia_consumida": {
+      "kwh": 675,
+      "precio_eur_kwh": 0.196,
+      "importe": 132.30
+    },
+    "descuentos": [
+      {
+        "concepto": "Descuento sobre consumo 20%",
+        "porcentaje": 20,
+        "base": 132.30,
+        "importe": -26.46
+      }
+    ],
+    "compensacion_excedentes": null
+  },
+  "cargos_normativos": {
+    "financiacion_bono_social_fijo": {
+      "dias": 30,
+      "precio_eur_dia": 0.012742,
+      "importe": 0.38
+    },
+    "impuesto_electricidad": {
+      "porcentaje": 5.11269632,
+      "base": 211.63,
+      "importe": 10.82,
+      "nota": "Formato porcentaje sobre base (precio mercado <45€/MWh)"
+    },
+    "total_energia_bloque": 222.45
+  },
+  "servicios_y_otros": {
+    "alquiler_equipos_medida": {
+      "dias": 30,
+      "precio_eur_dia": 0.197918,
+      "importe": 5.94
+    },
+    "subtotal_servicios": 5.94,
+    "importe_total_base_iva": 228.39,
+    "iva_split": [
+      {
+        "tipo": "IVA general",
+        "porcentaje": 21,
+        "base": 228.39,
+        "importe": 47.96,
+        "nota_legal": null
+      }
+    ],
+    "iva_total": 47.96,
+    "total_factura": 276.35
+  },
+  "precios_unitarios": {
+    "potencia_eur_kw_dia": {
+      "p1": 0.057178,
+      "p2": 0.030959,
+      "p3": 0.018438,
+      "p4": 0.014219,
+      "p5": 0.008411,
+      "p6": 0.005671
+    },
+    "energia": {
+      "consumida_eur_kwh": 0.196,
+      "compensacion_excedentes_eur_kwh": null
+    },
+    "otros": {
+      "bono_social_fijo_eur_dia": 0.012742,
+      "alquiler_contador_eur_dia": 0.197918,
+      "impuesto_electricidad_porcentaje": 5.11269632,
+      "iva_porcentaje": 21
+    }
+  },
+  "consumo": {
+    "total_kwh": 675,
+    "medio_diario_eur_factura": 9.21,
+    "medio_diario_eur_ultimos_14_meses": 10.75,
+    "medio_cp_referencia_kwh": null,
+    "desagregado_kwh": {
+      "p1": 0,
+      "p2": 0,
+      "p3": 286,
+      "p4": 199,
+      "p5": 0,
+      "p6": 190
+    },
+    "lecturas_fecha": "2025-09-30",
+    "lecturas_tipo": "Última lectura: real",
+    "energia_activa_tabla": [
+      { "periodo": "P1", "lectura_desde": "0015878", "lectura_hasta": "0015878", "consumo_kwh": 0 },
+      { "periodo": "P2", "lectura_desde": "0037649", "lectura_hasta": "0037649", "consumo_kwh": 0 },
+      { "periodo": "P3", "lectura_desde": "0012003", "lectura_hasta": "0012287", "consumo_kwh": 286 },
+      { "periodo": "P4", "lectura_desde": "0006166", "lectura_hasta": "0006365", "consumo_kwh": 199 },
+      { "periodo": "P5", "lectura_desde": "0006382", "lectura_hasta": "0006382", "consumo_kwh": 0 },
+      { "periodo": "P6", "lectura_desde": "0011628", "lectura_hasta": "0011818", "consumo_kwh": 190 }
+    ],
+    "energia_reactiva_tabla": [
+      { "periodo": "P1", "lectura_desde": "0005483", "lectura_hasta": "0005483", "consumo_kvarh": 0 },
+      { "periodo": "P2", "lectura_desde": "0013822", "lectura_hasta": "0013822", "consumo_kvarh": 0 },
+      { "periodo": "P3", "lectura_desde": "0004214", "lectura_hasta": "0004266", "consumo_kvarh": 52 },
+      { "periodo": "P4", "lectura_desde": "0001609", "lectura_hasta": "0001656", "consumo_kvarh": 47 },
+      { "periodo": "P5", "lectura_desde": "0002221", "lectura_hasta": "0002221", "consumo_kvarh": 0 },
+      { "periodo": "P6", "lectura_desde": "0001656", "lectura_hasta": "0001657", "consumo_kvarh": 1 }
+    ],
+    "maximetros_tabla_kw": {
+      "p1": 0,
+      "p2": 0,
+      "p3": 13.59,
+      "p4": 10.13,
+      "p5": 0,
+      "p6": 3.78
+    },
+    "potencias_maximas_demandadas_ultimo_ano": null
+  },
+  "autoconsumo": {
+    "compensacion_excedentes": false,
+    "energia_compensada_kwh": null,
+    "precio_compensacion_eur_kwh": null,
+    "importe_compensado_eur": null,
+    "solar_cloud": false,
+    "energia_100_renovable": true,
+    "garantia_origen_cnmc": true
+  },
+  "peajes_acceso_sin_impuestos": null,
+  "distribucion_coste_porcentaje": null,
+  "origen_electricidad_mix": null,
+  "impacto_medioambiental": null,
+  "observaciones_legales_y_promociones": {
+    "empresa_sostenible_mensaje": "Controla tu consumo energético con nuestro Asistente Smart. Consigue un negocio más eficiente con Smart Solutions. Elige factura electrónica desde Mi Área Cliente.",
+    "nota_reverso": "Puede encontrar el desglose detallado de los conceptos facturados en el reverso de esta factura. Además, en iberdrola.info/factura-luz le explicamos con detalle la factura.",
+    "sello_contabilizado": "CONTABILIZADO (sello manual en el PDF)"
+  },
+  "reclamaciones": null,
+  "contactos": {
+    "digital": {
+      "web": "www.iberdrola.es",
+      "email": "empresas@tuiberdrola.es",
+      "app": null,
+      "area_cliente": "Mi Área Cliente"
+    },
+    "telefonos": {
+      "atencion_cliente": ["900 400 408", "925 05 99 06"],
+      "averias_zona": "900 171 171"
+    },
+    "oficinas": [
+      "Calle Arquitecto Julio Carrilero 21, 02005 Albacete",
+      "Calle Maria Marin 54, 02004 Albacete"
+    ]
+  },
+  "advertencias": [
+    {
+      "tipo": "pdf_multiple_facturas",
+      "descripcion": "Este PDF contiene DOS facturas del mismo titular (AGROSERVI GASAN S.L.U) pero con distintos contratos y suministros. Esta es la primera factura (contrato 783126943, C/Dublin, 3.0TD, 276,35 €). La segunda está en las páginas 3-4 del PDF."
+    },
+    {
+      "tipo": "paginas_incompletas",
+      "descripcion": "Sólo están disponibles las páginas 1-2 de esta factura (de las 4 originales). Faltan: información adicional con CUPS/NIF/IBAN/distribuidora, texto de reclamaciones, mix energético e impacto ambiental. Los campos correspondientes quedan como null."
+    }
+  ],
+  "metadatos_documento": {
+    "codigo_barras": "0783126943002499902005020030002020030105",
+    "codigo_postal_distribucion": "IN 999 M C 0783126943 0 I 08",
+    "codigos_internos_pagina_1": "5110 000825 005301 20251003",
+    "sello_manual": "CONTABILIZADO (sello rojo manual)",
+    "certificaciones_emisor": ["AENOR - Gestión de Reclamaciones", "AENOR - Gestión de la Calidad", "Establecimiento Adherido", "Arbitraje de Consumo"],
+    "certificacion_papel": "PEFC"
+  }
+}

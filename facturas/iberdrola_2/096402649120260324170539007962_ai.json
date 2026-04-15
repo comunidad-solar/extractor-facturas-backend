@@ -1,0 +1,336 @@
+{
+  "archivo_fuente": "096402649120260324170539007962.pdf",
+  "tipo_documento": "Factura de electricidad",
+  "numero_paginas": 4,
+  "emisor": {
+    "empresa": "IBERDROLA CLIENTES, S.A.U.",
+    "cif": "A-95758389",
+    "domicilio_fiscal": "C/ Tomás Redondo 1, 28033 Madrid",
+    "domicilio_social": "Plaza Euskadi 5, 48009 Bilbao",
+    "registro_mercantil": "Bizkaia, tomo 5448, folio 19, hoja BI-63981, inscripción 1ª",
+    "apartado_correos_remite": "61175, 28080 Madrid"
+  },
+  "cliente": {
+    "titular": "SERGIO LOPEZ OÑA",
+    "nif": "34805897C",
+    "direccion_suministro": {
+      "calle": "Avda Gran Via Germanias, 6, 4º 7",
+      "codigo_postal": "46006",
+      "municipio": "Valencia",
+      "provincia": "Valencia"
+    }
+  },
+  "factura": {
+    "numero_factura": "21260324010315876",
+    "numero_contrato": "964026491",
+    "periodo_facturacion": {
+      "inicio": "2026-02-17",
+      "fin": "2026-03-19"
+    },
+    "dias_facturados": 30,
+    "fecha_emision": "2026-03-24",
+    "fecha_prevista_cobro": "2026-04-01",
+    "total": 82.08,
+    "moneda": "EUR"
+  },
+  "contrato": {
+    "plan": null,
+    "potencia_punta_kw": 4.6,
+    "potencia_valle_kw": 4.6,
+    "peaje_acceso": "2.0TD",
+    "mercado": "Libre",
+    "segmento_tarifario": 1,
+    "cups": "ES0021000008782164NW",
+    "cups_formato_original": "ES 0021 0000 0878 2164 NW",
+    "numero_contador": "0185023140",
+    "numero_contrato_acceso": "000641020454",
+    "empresa_distribuidora": "i-DE, Redes Eléctricas Inteligentes, S.A.U.",
+    "web_distribuidora": "www.i-de.es/clientes",
+    "fecha_final_contrato": "2026-10-22",
+    "permanencia": false,
+    "precios_peajes_acceso_boe": "2025-12-22",
+    "energia_garantia_origen": "Renovable 100%"
+  },
+  "forma_pago": {
+    "tipo": "Domiciliación bancaria",
+    "iban": "ES87 0186 0093 1605 2789 ****",
+    "iban_nota": "Últimos 4 dígitos ocultos por seguridad",
+    "bic": "BFIVESBBXXX",
+    "codigo_mandato": "297221605000"
+  },
+  "resumen_economico": {
+    "energia": 74.34,
+    "descuentos_energia": -10.19,
+    "cargos_normativos": 0.57,
+    "servicios_y_otros": 9.07,
+    "iva": 8.29,
+    "total": 82.08
+  },
+  "detalle_energia": {
+    "potencia": {
+      "punta": {
+        "potencia_kw": 4.6,
+        "dias": 30,
+        "precio_eur_kw_dia": 0.113621,
+        "importe": 15.68
+      },
+      "valle": {
+        "potencia_kw": 4.6,
+        "dias": 30,
+        "precio_eur_kw_dia": 0.053667,
+        "importe": 7.41
+      },
+      "total_potencia": 23.09
+    },
+    "energia_consumida": {
+      "kwh": 326,
+      "precio_eur_kwh": 0.156207,
+      "importe": 50.92
+    },
+    "descuentos": [
+      {
+        "concepto": "Descuento sobre consumo 5%",
+        "porcentaje": 5,
+        "base": 50.92,
+        "importe": -2.55
+      },
+      {
+        "concepto": "Descuento sobre consumo 15%",
+        "porcentaje": 15,
+        "base": 50.92,
+        "importe": -7.64
+      }
+    ],
+    "compensacion_excedentes": null
+  },
+  "cargos_normativos": {
+    "financiacion_bono_social_fijo": {
+      "dias": 30,
+      "precio_eur_dia": 0.019121,
+      "importe": 0.57
+    },
+    "impuesto_electricidad": {
+      "porcentaje": null,
+      "base": null,
+      "kwh": 326,
+      "precio_eur_kwh": 0.001,
+      "importe": 0.33,
+      "nota": "Formato €/kWh en lugar de porcentaje sobre base (esquema diferente al de facturas anteriores a RDL 7/2026)"
+    },
+    "total_energia_bloque": 64.72,
+    "nota_legal_rdl_8_2023": null
+  },
+  "servicios_y_otros": {
+    "alquiler_equipos_medida": {
+      "dias": 30,
+      "precio_eur_dia": 0.02663,
+      "importe": 0.80
+    },
+    "pack_iberdrola": {
+      "meses": 1.01,
+      "precio_eur_mes": 8.19,
+      "importe": 8.27,
+      "nota": "En esta factura el producto se llama 'Pack Iberdrola' (sin 'Hogar'), sin descuento de bienvenida aplicado"
+    },
+    "descuento_pack_iberdrola_hogar": null,
+    "subtotal_servicios": 9.07,
+    "importe_total_base_iva": 73.79,
+    "iva_split": [
+      {
+        "tipo": "IVA Reducido",
+        "porcentaje": 10,
+        "base": 65.52,
+        "importe": 6.55,
+        "nota_legal": "En virtud del Real Decreto-ley 7/2026, del 20 de marzo de 2026, el IVA aplicable a su factura se encuentra reducido del 21% al 10%."
+      },
+      {
+        "tipo": "IVA general",
+        "porcentaje": 21,
+        "base": 8.27,
+        "importe": 1.74,
+        "nota_legal": null
+      }
+    ],
+    "iva_total": 8.29,
+    "total_factura": 82.08
+  },
+  "precios_unitarios": {
+    "potencia": {
+      "punta_eur_kw_dia": 0.113621,
+      "valle_eur_kw_dia": 0.053667
+    },
+    "energia": {
+      "consumida_eur_kwh": 0.156207,
+      "compensacion_excedentes_eur_kwh": null
+    },
+    "otros": {
+      "bono_social_fijo_eur_dia": 0.019121,
+      "alquiler_contador_eur_dia": 0.02663,
+      "impuesto_electricidad_porcentaje": null,
+      "impuesto_electricidad_eur_kwh": 0.001,
+      "iva_reducido_porcentaje": 10,
+      "iva_porcentaje": 21
+    }
+  },
+  "consumo": {
+    "total_kwh": 326,
+    "medio_diario_eur_factura": 2.74,
+    "medio_diario_eur_ultimos_5_meses": 3.01,
+    "medio_cp_referencia_kwh": 324.84,
+    "desagregado_kwh": {
+      "punta_p1": 94,
+      "llano_p2": 111,
+      "valle_p3": 121
+    },
+    "lecturas_fecha": "2026-03-19",
+    "lecturas_tipo": "Reales",
+    "lecturas_desagregadas_kwh": {
+      "punta": 7247,
+      "llano": 7734,
+      "valle": 7237
+    },
+    "potencias_maximas_demandadas_ultimo_ano": {
+      "p1_punta_kw": 6.28,
+      "p2_valle_kw": 5.99
+    }
+  },
+  "autoconsumo": {
+    "compensacion_excedentes": false,
+    "energia_compensada_kwh": null,
+    "precio_compensacion_eur_kwh": null,
+    "importe_compensado_eur": null,
+    "solar_cloud": false,
+    "solar_cloud_app": null,
+    "energia_100_renovable": true,
+    "garantia_origen_cnmc": true
+  },
+  "peajes_acceso_sin_impuestos": {
+    "total": 24.38,
+    "potencia": 10.76,
+    "energia": 12.82,
+    "alquiler_contador": 0.80,
+    "impuestos_aplicables": "Impuesto Eléctrico e IVA u otros impuestos indirectos",
+    "nota": "Estos importes están englobados en el importe total de la factura (no representan coste adicional)."
+  },
+  "distribucion_coste_porcentaje": {
+    "energia": 59.5,
+    "peajes_transporte_distribucion": 17.0,
+    "impuestos": 10.1,
+    "alquiler_contador": 1.0,
+    "bono_social": 0.7,
+    "cargos_total": 11.7,
+    "cargos_detalle": {
+      "anualidades_deficit": 4.6,
+      "sobrecoste_no_peninsular": 2.0,
+      "renovables_cogeneracion_residuos": 5.0,
+      "otros": 0.1
+    },
+    "impuestos_y_cargos_totales": 21.8
+  },
+  "origen_electricidad_mix_2024": {
+    "texto_introductorio": "Si bien la energía eléctrica que llega a nuestros hogares es indistinguible de la que consumen nuestros vecinos u otros consumidores conectados al mismo sistema eléctrico, es posible conocer el origen de la producción de energía eléctrica equivalente a la que consume en el hogar.",
+    "iberdrola": {
+      "renovable": 48.0,
+      "cogeneracion_alta_eficiencia": 2.2,
+      "cc_gas_natural": 17.0,
+      "carbon": 5.1,
+      "fuel_gas": 1.2,
+      "nuclear": 21.1,
+      "otras_no_renovables": 5.4
+    },
+    "mix_nacional": {
+      "renovable": 56.5,
+      "cogeneracion_alta_eficiencia": 1.7,
+      "cc_gas_natural": 14.2,
+      "carbon": 1.1,
+      "fuel_gas": 1.1,
+      "nuclear": 20.2,
+      "otras_no_renovables": 5.2
+    }
+  },
+  "impacto_medioambiental": {
+    "escala": "A a G (A=mínimo impacto, G=máximo impacto, D=media nacional)",
+    "emisiones_co2_eq_g_kwh": {
+      "iberdrola": 154,
+      "media_nacional": 102,
+      "categoria_iberdrola": "F"
+    },
+    "residuos_radiactivos_alta_actividad_ug_kwh": {
+      "iberdrola": 466,
+      "media_nacional": 446,
+      "categoria_iberdrola": "D"
+    },
+    "etiquetado_global_2024": {
+      "categoria": "D",
+      "significado": "Impacto ambiental igual a la media nacional",
+      "texto_literal": "De acuerdo con el sistema de Garantía de Origen e Información al Consumidor, implantado por la Comisión Nacional de la Energía, Iberdrola informa que toda la electricidad comercializada en 2024 ha sido etiquetada en la categoría D que indica un impacto ambiental igual a la media nacional."
+    }
+  },
+  "observaciones_legales_y_promociones": {
+    "rdl_8_2023_impuesto_electrico": null,
+    "rdl_8_2023_iva": null,
+    "rdl_7_2026_iva_reducido": "En virtud del Real Decreto-ley 7/2026, del 20 de marzo de 2026, el IVA aplicable a su factura se encuentra reducido del 21% al 10%.",
+    "promocion_mi_iberdrola_plus": {
+      "descripcion": "Con Mi Iberdrola puedes obtener hasta 40 € al año por vivienda para ahorrar en tus próximas facturas",
+      "beneficio_eur_ano": 40,
+      "condicion": "por vivienda"
+    },
+    "comparador_cnmc": "https://comparador.cnmc.gob.es"
+  },
+  "reclamaciones": {
+    "texto_literal": "Para reclamaciones relacionadas con el contrato de suministro o la facturación puede dirigirse a cualquiera de los canales de atención indicados en esta factura, o en el Apartado de Correos 61090, 28080 de Madrid. Si su reclamación no ha sido resuelta o ha superado el plazo de 30 días, puede dirigirse a la Junta Arbitral de Consumo Autonómica de Comunitat Valenciana (teléfono de contacto: 963866000). Además, puede acudir a los órganos competentes en materia de Consumo y/o Energía de dicha Comunidad Autónoma.",
+    "apartado_correos": "61090, 28080 Madrid",
+    "junta_arbitral_consumo": {
+      "comunidad_autonoma": "Comunitat Valenciana",
+      "telefono": "963 866 000"
+    },
+    "plazo_dias": 30
+  },
+  "contactos": {
+    "digital": {
+      "web": "www.iberdrola.es",
+      "area_cliente": "Mi Área Cliente (www.iberdrola.es)",
+      "email": "clientes@tuiberdrola.es",
+      "app": "Iberdrola Clientes",
+      "web_consejos_eficiencia": null
+    },
+    "telefonos": {
+      "atencion_cliente": ["900 225 235", "960 88 24 67"],
+      "averias_zona": "900 171 171",
+      "reparaciones_hogar": ["900 22 45 22", "960 88 24 68"],
+      "smart_solar_autoconsumo": null
+    },
+    "oficinas": [
+      "CL de Sant Vicent Màrtir 94, 46007 València",
+      "Av de Peris i Valero 164, 46006 València"
+    ],
+    "recursos_externos": {
+      "origen_electricidad_cnmc": "gdo.cnmc.es",
+      "comparador_ofertas_cnmc": "https://comparador.cnmc.gob.es",
+      "junta_arbitral_consumo": "963 866 000",
+      "apartado_correos_reclamaciones": "61090, 28080 Madrid"
+    }
+  },
+  "advertencias": [],
+  "metadatos_documento": {
+    "codigo_barras": "09640264910034910460064625000140124036",
+    "codigo_postal_distribucion": "DY 910 M C 0964026491 0 1 08",
+    "codigos_internos_por_pagina": {
+      "pagina_1": "ind-AY-ele-009 016800 066731 20260324",
+      "pagina_2": "03100070",
+      "pagina_4": ["04000070", "08 EGEN SGCOM 1586"]
+    },
+    "certificaciones_emisor": [
+      "AENOR - Gestión de Reclamaciones",
+      "AENOR - Gestión de la Calidad",
+      "IQNet",
+      "Establecimiento Adherido",
+      "Arbitraje de Consumo"
+    ],
+    "certificacion_papel": {
+      "estandar": "PEFC",
+      "descripcion": "Bosques gestionados de forma sostenible y fuentes controladas",
+      "web": "www.pefc.es"
+    }
+  }
+}

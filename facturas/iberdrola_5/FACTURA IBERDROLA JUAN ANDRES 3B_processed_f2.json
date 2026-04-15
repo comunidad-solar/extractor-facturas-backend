@@ -1,0 +1,78 @@
+{
+  "cups": "ES0021000015498875NT",
+  "periodo_inicio": "13/08/2025",
+  "periodo_fin": "09/09/2025",
+  "dias_facturados": "27",
+  "comercializadora": "IBERDROLA CLIENTES, S.A.U.",
+  "distribuidora": "i-DE, Redes Eléctricas Inteligentes, S.A.U.",
+  "tarifa_acceso": "2.0TD",
+
+  "pp_p1": 0.088327,
+  "pp_p2": 0.002587,
+  "pp_p3": null,
+  "pp_p4": null,
+  "pp_p5": null,
+  "pp_p6": null,
+  "pe_p1": 0.143569,
+  "pe_p2": null,
+  "pe_p3": null,
+  "pe_p4": null,
+  "pe_p5": null,
+  "pe_p6": null,
+  "pot_p1_kw": 10.392,
+  "pot_p2_kw": 10.392,
+  "pot_p3_kw": 0,
+  "pot_p4_kw": 0,
+  "pot_p5_kw": 0,
+  "pot_p6_kw": 0,
+
+  "energia_facturada_kwh": 197,
+  "consumo_p1_kwh": 50,
+  "consumo_p2_kwh": 81,
+  "consumo_p3_kwh": 66,
+  "consumo_p4_kwh": 0,
+  "consumo_p5_kwh": 0,
+  "consumo_p6_kwh": 0,
+
+  "imp_ele": 5.11269632,
+  "imp_ele_eur_kwh": null,
+  "iva": 21,
+  "iva_reducido": null,
+  "alq_eq_dia": 0.044712,
+  "bono_social": 0.012742,
+
+  "compensacion_excedentes_kwh": null,
+  "compensacion_excedentes_importe_eur": null,
+
+  "descuentos": {},
+
+  "importe_factura": 79.12,
+
+  "otros": {
+    "Asistencia PYMES Iberdrola": 7.28
+  },
+
+  "validacion_cuadre": {
+    "potencia_total_calc": 25.51,
+    "energia_facturada_calc": 28.28,
+    "descuentos_total_calc": 0,
+    "compensacion_excedentes_calc": 0,
+    "bono_social_calc": 0.34,
+    "impuesto_electricidad_calc": 2.77,
+    "alquiler_contador_calc": 1.21,
+    "otros_calc": 7.28,
+    "iva_total_calc": 13.73,
+    "suma_conceptos": 79.12,
+    "importe_factura_pdf": 79.12,
+    "diferencia_eur": 0.00,
+    "tolerancia_eur": 0.02,
+    "cuadra": true
+  },
+
+  "error": null,
+
+  "advertencias_pdf": [
+    "PDF contiene 2 facturas concatenadas — esta es la segunda (contrato 737578348, C/Atenas)",
+    "Sólo páginas 1-2 de las 4 originales disponibles; mix energético no extraído"
+  ]
+}

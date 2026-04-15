@@ -54,3 +54,60 @@ class ExtractionResponse(BaseModel):
     api_ok:             bool            = False
     api_error:          Optional[str]   = None
     fichero_json:       Optional[str]   = None
+
+
+class ClaudeExtractionInput(BaseModel):
+    """Modelo slim para output_format de messages.parse().
+    Sem campos Optional — usa defaults 0.0/""/dict vazio para evitar union types
+    que causam timeout de compilação na API. O mapper converte zeros/vazios → None.
+    Períodos extra (pp_p3..p6, pe_p4..p6) vão em 'otros'."""
+
+    cups:               str   = ""
+    periodo_inicio:     str   = ""
+    periodo_fin:        str   = ""
+    comercializadora:   str   = ""
+    importe_factura:    float = 0.0
+    pp_p1:              float = 0.0
+    pp_p2:              float = 0.0
+    pe_p1:              float = 0.0
+    pe_p2:              float = 0.0
+    pe_p3:              float = 0.0
+    imp_ele:            float = 0.0
+    iva:                int   = 0
+    alq_eq_dia:         float = 0.0
+    bono_social:        float = 0.0
+    imp_termino_energia_eur:    float = 0.0
+    imp_termino_potencia_eur:   float = 0.0
+    imp_impuesto_electrico_eur: float = 0.0
+    imp_alquiler_eur:           float = 0.0
+    imp_iva_eur:                float = 0.0
+    otros:              str   = ""  # JSON string com pp_p3..p6, pe_p4..p6, descuentos, etc.
+
+
+class ValidacionCuadre(BaseModel):
+    cuadra:             bool
+    importe_factura:    Optional[float] = None
+    suma_conceptos:     Optional[float] = None
+    diferencia_eur:     Optional[float] = None
+    error:              Optional[str]   = None
+
+
+class ExtractionResponseAI(ExtractionResponse):
+    """Extiende ExtractionResponse con importes en € extraídos por Claude
+    y los campos de reconciliación contable (R13)."""
+
+    # Importes en € de cada línea de la factura (extraídos por Claude)
+    imp_termino_energia_eur:    Optional[float] = None
+    imp_termino_potencia_eur:   Optional[float] = None
+    imp_impuesto_electrico_eur: Optional[float] = None
+    imp_alquiler_eur:           Optional[float] = None
+    imp_iva_eur:                Optional[float] = None
+
+    # Conceptos no estándar (Pack Iberdrola, Asistencia PYMES, etc.)
+    otros:              Optional[dict]              = None
+
+    # Reconciliación contable R13 (calculada en el servidor)
+    validacion_cuadre:  Optional[ValidacionCuadre]  = None
+
+    # ID de sesión creada en /sesion tras la extracción
+    session_id:         Optional[str]               = None
