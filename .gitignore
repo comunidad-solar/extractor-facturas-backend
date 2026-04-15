@@ -1,10 +1,30 @@
+# ── Markdown notes (documentación local, no versionada) ──────────────────────
 *.md
-.env
-resultados/ES0021000013483679RH1F_06-07-2025_04-08-2025.json
-/resultados
+!docs/**/*.md
+
+# Explícitos (redundantes con *.md pero documentan intención)
+analisar-factura.md
+informe.md
+cambios.md
+
+# ── Carpetas locales / generadas ─────────────────────────────────────────────
+.claude/
+facturas/
+improvements/
+
+# ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
+
+# ── Entorno ──────────────────────────────────────────────────────────────────
+.env
+
+# ── Resultados generados ─────────────────────────────────────────────────────
+/resultados
+resultados/ES0021000013483679RH1F_06-07-2025_04-08-2025.json
+
+# ── Skills / agents externos ─────────────────────────────────────────────────
 .agents/skills/skill-creator/assets/eval_review.html
 .agents/skills/skill-creator/eval-viewer/generate_review.py
 .agents/skills/skill-creator/eval-viewer/viewer.html
@@ -18,20 +38,8 @@ __pycache__/
 .agents/skills/skill-creator/scripts/run_eval.py
 .agents/skills/skill-creator/scripts/run_loop.py
 .agents/skills/skill-creator/scripts/utils.py
-.claude/skills/excalidraw-diagram-skill/
-.claude/skills/skill-creator/assets/eval_review.html
-.claude/skills/skill-creator/eval-viewer/generate_review.py
-.claude/skills/skill-creator/eval-viewer/viewer.html
-.claude/skills/skill-creator/LICENSE.txt
-.claude/skills/skill-creator/scripts/__init__.py
-.claude/skills/skill-creator/scripts/aggregate_benchmark.py
-.claude/skills/skill-creator/scripts/generate_report.py
-.claude/skills/skill-creator/scripts/improve_description.py
-.claude/skills/skill-creator/scripts/package_skill.py
-.claude/skills/skill-creator/scripts/quick_validate.py
-.claude/skills/skill-creator/scripts/run_eval.py
-.claude/skills/skill-creator/scripts/run_loop.py
-.claude/skills/skill-creator/scripts/utils.py
 Anthropic-Cybersecurity-Skills/
 skills-lock.json
+
+# ── Certificados ─────────────────────────────────────────────────────────────
 *.pem
