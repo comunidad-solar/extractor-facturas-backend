@@ -2,43 +2,45 @@
 # Llama a la API de Claude con el PDF en base64 y devuelve un
 # ExtractionResponseAI validado por Pydantic.
 #
-# Usa ClaudeExtractionInput (21 campos) como output_format para respetar
-# el límite de 24 parámetros opcionales de la API de structured outputs,
-# y después mapea el resultado a ExtractionResponseAI.
+# Usa messages.create (texto libre) en lugar de output_format/structured outputs
+# para evitar las limitaciones de compilación de gramáticas de la API.
+# Claude devuelve un bloque ```json``` que se parsea aquí.
 
 import base64
+import json
+import re
 
 from api.claude.client import get_client
 from api.claude.prompts import SYSTEM_PROMPT
-from api.models import ClaudeExtractionInput, ExtractionResponseAI
+from api.models import ExtractionResponseAI
 
 MODEL = "claude-sonnet-4-6"
 
-# Campos de ExtractionResponseAI que pueden llegar en el dict 'otros'
-# cuando la tarifa tiene más de 2 períodos de potencia o 3 de energía
-_EXTRA_PERIOD_FIELDS = {"pp_p3", "pp_p4", "pp_p5", "pp_p6", "pe_p4", "pe_p5", "pe_p6"}
+# Campos válidos de ExtractionResponseAI para filtrar la respuesta de Claude
+_VALID_FIELDS = set(ExtractionResponseAI.model_fields.keys())
 
 _USER_TEXT = (
-    "Extrae todos los datos de esta factura según las instrucciones del sistema."
+    "Extrae todos los datos de esta factura según las instrucciones del sistema. "
+    "Devuelve ÚNICAMENTE un bloque ```json``` con los campos extraídos. "
+    "Sin texto adicional antes ni después del bloque JSON."
 )
 
 
-def _map_to_response(raw: ClaudeExtractionInput) -> ExtractionResponseAI:
-    """Convierte ClaudeExtractionInput → ExtractionResponseAI.
-    Los campos de períodos extra (pp_p3..p6, pe_p4..p6) pueden venir
-    en el dict 'otros' — se promueven a sus campos propios."""
-    data = raw.model_dump()
-    otros: dict = data.pop("otros") or {}
+def _parse_json_from_text(text: str) -> dict:
+    """Extrae y parsea el JSON del texto de respuesta de Claude.
+    Acepta tanto bloques ```json ... ``` como JSON puro."""
+    # Intentar extraer bloque ```json ... ```
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+    if match:
+        return json.loads(match.group(1))
+    # Fallback: intentar parsear todo el texto como JSON
+    return json.loads(text.strip())
 
-    # Promover campos de período extra desde 'otros' a sus campos propios
-    otros_restantes = {}
-    for k, v in otros.items():
-        if k in _EXTRA_PERIOD_FIELDS:
-            data[k] = v
-        else:
-            otros_restantes[k] = v
 
-    return ExtractionResponseAI(**data, otros=otros_restantes or None)
+def _build_response(data: dict) -> ExtractionResponseAI:
+    """Filtra las claves desconocidas y construye ExtractionResponseAI."""
+    filtered = {k: v for k, v in data.items() if k in _VALID_FIELDS}
+    return ExtractionResponseAI(**filtered)
 
 
 def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
@@ -52,7 +54,7 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
     client = get_client()
     pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
 
-    response = client.messages.parse(
+    response = client.messages.create(
         model=MODEL,
         max_tokens=4096,
         system=[
@@ -78,14 +80,18 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
                 ],
             }
         ],
-        output_format=ClaudeExtractionInput,
     )
 
-    raw = response.parsed_output
-    if raw is None:
-        raise ValueError("Claude no devolvió un objeto estructurado válido")
+    text = response.content[0].text if response.content else ""
 
-    result = _map_to_response(raw)
+    try:
+        data = _parse_json_from_text(text)
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"  ❌  JSON inválido en respuesta de Claude: {e}")
+        print(f"  Respuesta recibida (primeros 500 chars):\n{text[:500]}")
+        raise ValueError(f"Claude no devolvió JSON válido: {e}")
+
+    result = _build_response(data)
 
     usage = response.usage
     print(f"  ✅  Extracción completada")
