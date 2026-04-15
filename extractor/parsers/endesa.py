@@ -289,6 +289,39 @@ class EndesaParser(BaseParser):
             result["pot_p2_kw"] = float(norm(m.group(1)))
         return result or super().extraer_potencias_contratadas()
 
+    def extraer_consumos(self) -> dict:
+        """
+        Endesa: "Facturación del Consumo 31,710 kWh x 0,176213 Eur/kWh"
+        Pode ter múltiplos sub-períodos — soma todos os kWh para obter consumo_p1_kwh.
+        Corta antes de "FACTURA ENDESA X" para evitar sub-fatura de serviços.
+        """
+        result = {}
+
+        corte = re.search(
+            r"FACTURA\s+ENDESA\s+X|ENDESA\s+X\s+SERVICIOS",
+            self.text, re.IGNORECASE
+        )
+        texto = self.text[:corte.start()] if corte else self.text
+
+        patron = re.compile(
+            r'Facturaci[oó]n\s+del\s+Consumo\s+([0-9]+[,\.][0-9]+)\s*kWh',
+            re.IGNORECASE
+        )
+
+        total_kwh = 0.0
+        encontrou = False
+        for m in patron.finditer(texto):
+            try:
+                total_kwh += float(norm(m.group(1)))
+                encontrou = True
+            except (ValueError, TypeError):
+                pass
+
+        if encontrou and total_kwh > 0:
+            result["consumo_p1_kwh"] = round(total_kwh, 3)
+
+        return result or super().extraer_consumos()
+
     def extraer_iva(self):
         """
         Endesa: el PDF puede contener dos facturas — Endesa Energía (principal) y

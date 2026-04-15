@@ -764,6 +764,73 @@ class BaseParser:
 
         return result
 
+    def extraer_consumos(self) -> dict:
+        """
+        Extrae los consumos por período (kWh) del PDF.
+        Patrón genérico — cada parser sobrescribe donde el formato difiere.
+        Retorna dict {"consumo_p1_kwh": X, ...} con los períodos encontrados.
+        Los períodos no encontrados quedan ausentes del dict (Ingebau los rellena).
+        """
+        result = {}
+
+        # Patrón 1: "Punta/Llano/Valle X kWh" — Octopus, Naturgy
+        mapeo_label = {
+            "punta": 1, "llano": 2, "valle": 3,
+        }
+        for linha in self.linhas:
+            l = linha.lower()
+            for label, periodo in mapeo_label.items():
+                if label in l:
+                    m = re.search(
+                        rf"{label}\s+([0-9]+[,\.][0-9]*)\s*kWh",
+                        linha, re.IGNORECASE
+                    )
+                    if m:
+                        campo = f"consumo_p{periodo}_kwh"
+                        if campo not in result:
+                            try:
+                                result[campo] = float(norm(m.group(1)))
+                            except (ValueError, TypeError):
+                                pass
+
+        if result:
+            return result
+
+        # Patrón 2: "P1. Energía activa X,XXX kWh" — Contigo
+        for linha in self.linhas:
+            if "energía activa" not in linha.lower() and "energia activa" not in linha.lower():
+                continue
+            if any(x in linha.lower() for x in ["peaje", "cargo", "importe"]):
+                continue
+            m_p = re.search(r"\bP([1-6])\b", linha, re.IGNORECASE)
+            m_k = re.search(r"([0-9]+[,\.][0-9]+)\s*kWh", linha, re.IGNORECASE)
+            if m_p and m_k:
+                campo = f"consumo_p{m_p.group(1)}_kwh"
+                if campo not in result:
+                    try:
+                        result[campo] = float(norm(m_k.group(1)))
+                    except (ValueError, TypeError):
+                        pass
+
+        if result:
+            return result
+
+        # Patrón 3: "Px X kWh * Y €/kWh" — genérico
+        patron = re.compile(
+            r'P([1-6])[^0-9]{0,10}([0-9]+[,\.][0-9]*)\s*kWh\s*[x×\*]',
+            re.IGNORECASE
+        )
+        for m in patron.finditer(self.text):
+            try:
+                periodo = int(m.group(1))
+                campo   = f"consumo_p{periodo}_kwh"
+                if campo not in result:
+                    result[campo] = float(norm(m.group(2)))
+            except (ValueError, TypeError):
+                pass
+
+        return result
+
     def _calcular_dias(self) -> int:
         """Calcula los días del período a partir de periodo_inicio y periodo_fin ya guardados."""
         inicio = self.fields.get("periodo_inicio")
