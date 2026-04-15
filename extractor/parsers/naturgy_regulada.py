@@ -159,13 +159,37 @@ class NaturgyReguladaParser(BaseParser):
 
         return result or super().extraer_potencias_contratadas()
 
+    def extraer_consumos(self) -> dict:
+        """
+        NaturgyRegulada: "Lectura en P1 (punta): 5.357 kWh  Consumo en P1:124 kWh"
+        Texto concatenado — captura "Consumo en P{n}:X kWh" na mesma linha.
+        """
+        result = {}
+
+        # Formato: "Consumo en P1:124 kWh" (pode estar concatenado)
+        patron = re.compile(
+            r'[Cc]onsumo\s+en\s+P([1-3])\s*:\s*([0-9]+(?:[,\.][0-9]*)?)\s*kWh',
+            re.IGNORECASE
+        )
+        for m in patron.finditer(self.text):
+            try:
+                periodo = int(m.group(1))
+                campo   = f"consumo_p{periodo}_kwh"
+                val = norm(m.group(2))
+                if campo not in result and val is not None:
+                    result[campo] = float(val)
+            except (ValueError, TypeError):
+                pass
+
+        return result or super().extraer_consumos()
+
     def extraer_alquiler(self) -> Optional[str]:
         """
         NaturgyRegulada: texto concatenado pelo pdfplumber.
         Formato: "Alquilerdelcontador: 26días*0,026630€/día"
         O BaseParser falha porque espera espaços entre os tokens.
         """
-        for linha in self.linhas:
+        for linha in  self.linhas:
             if "alquiler" not in linha.lower():
                 continue
 

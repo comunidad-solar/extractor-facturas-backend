@@ -225,6 +225,36 @@ class PepeEnergyParser(BaseParser):
                 result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
         return result or super().extraer_potencias_contratadas()
 
+    def extraer_consumos(self) -> dict:
+        """
+        PepeEnergy OCR: "Consumo facturado: P1 (Punta): 53 kWh. P2 (Llano): 55 kWh. P3 (Valle): 167 kWh."
+        Busca em self.text completo (não linha a linha) pois o OCR pode quebrar a linha.
+        """
+        result = {}
+
+        # Localizar bloco "Consumo facturado" no texto completo
+        m_bloco = re.search(r'[Cc]onsumo\s+facturado\s*:', self.text, re.IGNORECASE)
+        if not m_bloco:
+            return super().extraer_consumos()
+
+        # Extrair os próximos 200 caracteres após "Consumo facturado:"
+        trecho = self.text[m_bloco.start():m_bloco.start() + 200]
+
+        patron = re.compile(
+            r'P([1-6])\s*\([^)]+\)\s*:\s*([0-9]+(?:[,\.][0-9]*)?)\s*k[wW]+[hH]+',
+            re.IGNORECASE
+        )
+        for m in patron.finditer(trecho):
+            try:
+                periodo = int(m.group(1))
+                campo   = f"consumo_p{periodo}_kwh"
+                if campo not in result:
+                    result[campo] = float(norm(m.group(2)))
+            except (ValueError, TypeError):
+                pass
+
+        return result or super().extraer_consumos()
+
     def extraer_descuentos(self) -> dict:
         """
         PepeEnergy: "Descuento cliente Pepephone  -3,14 €"

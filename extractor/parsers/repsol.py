@@ -62,3 +62,31 @@ class RepsolParser(BaseParser):
             result["pot_p2_kw"] = float(norm(m.group(1)))
 
         return result or super().extraer_potencias_contratadas()
+
+    def extraer_consumos(self) -> dict:
+        """
+        Repsol: tabela de consumos com 3 colunas na página 2.
+        Formato: "(actual) hasta  58 kWh  39 kWh  87 kWh"
+        Os valores são Punta, Llano, Valle respectivamente.
+        """
+        result = {}
+
+        for linha in self.linhas:
+            l = linha.lower()
+            if "actual" not in l and "periodo" not in l:
+                continue
+            if "kwh" not in l:
+                continue
+
+            # Capturar 3 valores kWh na mesma linha
+            vals = re.findall(r"([0-9]+(?:[,\.][0-9]+)?)\s*kWh", linha, re.IGNORECASE)
+            if len(vals) >= 3:
+                try:
+                    result["consumo_p1_kwh"] = float(norm(vals[0]))
+                    result["consumo_p2_kwh"] = float(norm(vals[1]))
+                    result["consumo_p3_kwh"] = float(norm(vals[2]))
+                    return result
+                except (ValueError, TypeError):
+                    pass
+
+        return super().extraer_consumos()

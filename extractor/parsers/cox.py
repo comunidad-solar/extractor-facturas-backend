@@ -252,3 +252,43 @@ class CoxParser(BaseParser):
             print(f"  ⚠️  CoxParser.extraer_potencias_contratadas — error con fitz: {e}")
 
         return result or super().extraer_potencias_contratadas()
+
+    def extraer_consumos(self) -> dict:
+        """
+        Cox 3.0TD: consumos estão nas linhas de energia fitz.
+        Formato: "P3 2.959,00 kWh * 0,157235 €/kWh (31/07/2025 a 31/08/2025)"
+        O kWh antes do "*" é o consumo do período.
+        """
+        result = {}
+        if not self.pdf_path:
+            return super().extraer_consumos()
+
+        try:
+            doc = fitz.open(self.pdf_path)
+            fitz_full = ""
+            for page in doc:
+                fitz_full += page.get_text() + "\n"
+            doc.close()
+
+            fitz_collapsed = re.sub(r'\n+', ' ', fitz_full)
+
+            patron = re.compile(
+                r'P([1-6])\s+([\d.,]+)\s*kWh\s*\*\s*[\d.,]+\s*€/kWh',
+                re.IGNORECASE
+            )
+            for m in patron.finditer(fitz_collapsed):
+                try:
+                    periodo = int(m.group(1))
+                    campo   = f"consumo_p{periodo}_kwh"
+                    # Remove ponto de milhares antes de converter
+                    val_str = m.group(2).replace(".", "").replace(",", ".")
+                    val     = float(val_str)
+                    if campo not in result:
+                        result[campo] = val
+                except (ValueError, TypeError):
+                    pass
+
+        except Exception as e:
+            print(f"  ⚠️  CoxParser.extraer_consumos — error con fitz: {e}")
+
+        return result or super().extraer_consumos()

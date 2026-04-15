@@ -34,3 +34,4 @@ __pycache__/
 .claude/skills/skill-creator/scripts/utils.py
 Anthropic-Cybersecurity-Skills/
 skills-lock.json
+*.pem

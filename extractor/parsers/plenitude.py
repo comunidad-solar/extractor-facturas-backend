@@ -158,6 +158,37 @@ class PlenitudeParser(BaseParser):
 
         return result or super().extraer_potencias_contratadas()
 
+    def extraer_consumos(self) -> dict:
+        """
+        Plenitude OCR: "Desglose del consumo facturado por periodo: P1:25,00 kWh; P2:29,00 kWh; P3: 48,00 kWh;"
+        """
+        result = {}
+
+        patron = re.compile(
+            r'P([1-6])\s*:\s*([0-9]+[,\.][0-9]*)\s*k[wW]+[hH]+',
+            re.IGNORECASE
+        )
+
+        for linha in self.linhas:
+            if "desglose" not in linha.lower() and "consumo" not in linha.lower():
+                continue
+            if "periodo" not in linha.lower() and "period" not in linha.lower():
+                continue
+
+            for m in patron.finditer(linha):
+                try:
+                    periodo = int(m.group(1))
+                    campo   = f"consumo_p{periodo}_kwh"
+                    if campo not in result:
+                        result[campo] = float(norm(m.group(2)))
+                except (ValueError, TypeError):
+                    pass
+
+            if result:
+                break
+
+        return result or super().extraer_consumos()
+
     def extraer_descuentos(self) -> dict:
         """
         Plenitude: "Descuento asociado al ahorro de cargos establecido en el RDL 06/2022 de 29 de marzo: -4,20€"
