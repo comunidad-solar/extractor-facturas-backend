@@ -37,6 +37,17 @@ async def refresh_workdrive_token() -> str:
         return token
 
 
+def _is_invalid_token(r: httpx.Response) -> bool:
+    """Zoho WorkDrive devolve 500 com código F7003 quando o token é inválido/expirado."""
+    if r.status_code != 500:
+        return False
+    try:
+        errors = r.json().get("errors", [])
+        return any(e.get("id") == "F7003" for e in errors)
+    except Exception:
+        return False
+
+
 async def _create_folder(
     parent_id: str,
     name: str,
@@ -55,7 +66,7 @@ async def _create_folder(
         }
     }
     r = await client.post(f"{_WD_BASE}/files", json=body, headers=headers)
-    if r.status_code == 401:
+    if r.status_code == 401 or _is_invalid_token(r):
         return "UNAUTHORIZED"
     if r.status_code not in (200, 201):
         print(f"  ⚠️  WorkDrive create_folder HTTP {r.status_code}: {r.text[:200]}")
@@ -75,7 +86,7 @@ async def _upload_file(
     data    = {"filename": filename, "parent_id": folder_id}
     files   = {"content": (filename, content)}
     r = await client.post(_WD_UPLOAD, headers=headers, data=data, files=files)
-    if r.status_code == 401:
+    if r.status_code == 401 or _is_invalid_token(r):
         return "UNAUTHORIZED"
     if r.status_code not in (200, 201):
         print(f"  ⚠️  WorkDrive upload '{filename}' HTTP {r.status_code}: {r.text[:300]}")
