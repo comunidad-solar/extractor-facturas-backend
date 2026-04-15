@@ -1,12 +1,7 @@
 # api/claude/extractor.py
-# Llama a la API de Claude con el PDF en base64 y devuelve un
-# ExtractionResponseAI validado por Pydantic.
-#
-# Usa messages.create (texto libre) en lugar de output_format/structured outputs
-# para evitar las limitaciones de compilación de gramáticas de la API.
-# Claude devuelve un bloque ```json``` que se parsea aquí.
+# Llama a la API de Claude con el PDF vía Files API (upload → file_id → delete)
+# en lugar de base64 inline. Más eficiente para PDFs grandes.
 
-import base64
 import json
 import re
 
@@ -16,7 +11,6 @@ from api.models import ExtractionResponseAI
 
 MODEL = "claude-sonnet-4-6"
 
-# Campos válidos de ExtractionResponseAI para filtrar la respuesta de Claude
 _VALID_FIELDS = set(ExtractionResponseAI.model_fields.keys())
 
 _USER_TEXT = (
@@ -27,60 +21,73 @@ _USER_TEXT = (
 
 
 def _parse_json_from_text(text: str) -> dict:
-    """Extrae y parsea el JSON del texto de respuesta de Claude.
-    Acepta tanto bloques ```json ... ``` como JSON puro."""
-    # Intentar extraer bloque ```json ... ```
+    """Extrae y parsea el JSON del texto de respuesta de Claude."""
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
     if match:
         return json.loads(match.group(1))
-    # Fallback: intentar parsear todo el texto como JSON
     return json.loads(text.strip())
 
 
 def _build_response(data: dict) -> ExtractionResponseAI:
-    """Filtra las claves desconocidas y construye ExtractionResponseAI."""
+    """Filtra claves desconocidas y construye ExtractionResponseAI."""
     filtered = {k: v for k, v in data.items() if k in _VALID_FIELDS}
     return ExtractionResponseAI(**filtered)
 
 
 def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
-    """Envía el PDF a Claude y devuelve los datos estructurados."""
+    """Sube el PDF a la Files API, extrae datos con Claude y borra el fichero."""
     print(f"\n{'='*70}")
     print(f"  *** API CLAUDE ***  ({MODEL})")
     print(f"{'='*70}")
     print(f"  PDF recibido: {len(pdf_bytes):,} bytes")
-    print(f"  Enviando a Claude...")
 
     client = get_client()
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4096,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": pdf_b64,
-                        },
-                    },
-                    {"type": "text", "text": _USER_TEXT},
-                ],
-            }
-        ],
+    # 1. Subir el PDF a la Files API
+    print(f"  Subiendo PDF a Files API...")
+    file_upload = client.beta.files.upload(
+        file=("factura.pdf", pdf_bytes, "application/pdf"),
     )
+    file_id = file_upload.id
+    print(f"  File ID: {file_id}")
+
+    try:
+        # 2. Llamar a Claude referenciando el fichero por ID
+        print(f"  Enviando a Claude...")
+        response = client.beta.messages.create(
+            model=MODEL,
+            max_tokens=4096,
+            betas=["files-api-2025-04-14"],
+            system=[
+                {
+                    "type": "text",
+                    "text": SYSTEM_PROMPT,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "file",
+                                "file_id": file_id,
+                            },
+                        },
+                        {"type": "text", "text": _USER_TEXT},
+                    ],
+                }
+            ],
+        )
+    finally:
+        # 3. Borrar el fichero siempre (éxito o error)
+        try:
+            client.beta.files.delete(file_id)
+            print(f"  Fichero {file_id} eliminado de Files API")
+        except Exception as e:
+            print(f"  ⚠️  No se pudo eliminar el fichero {file_id}: {e}")
 
     text = response.content[0].text if response.content else ""
 
@@ -88,7 +95,7 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
         data = _parse_json_from_text(text)
     except (json.JSONDecodeError, ValueError) as e:
         print(f"  ❌  JSON inválido en respuesta de Claude: {e}")
-        print(f"  Respuesta recibida (primeros 500 chars):\n{text[:500]}")
+        print(f"  Respuesta (primeros 500 chars):\n{text[:500]}")
         raise ValueError(f"Claude no devolvió JSON válido: {e}")
 
     result = _build_response(data)
