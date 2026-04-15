@@ -11,6 +11,7 @@ from api.claude.prompts import SYSTEM_PROMPT
 from api.models import ExtractionResponseAI
 
 MODEL = "claude-sonnet-4-6"
+MAX_TOKENS = 8192
 
 _VALID_FIELDS = set(ExtractionResponseAI.model_fields.keys())
 
@@ -22,10 +23,17 @@ _USER_TEXT = (
 
 
 def _parse_json_from_text(text: str) -> dict:
-    """Extrae y parsea el JSON del texto de respuesta de Claude."""
+    """Extrae y parsea el JSON del texto de respuesta de Claude.
+    Maneja bloques ```json cerrados, no cerrados (truncados) y JSON puro."""
+    # Bloque ```json ... ``` cerrado
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
     if match:
         return json.loads(match.group(1))
+    # Bloque ```json sin cerrar (respuesta truncada por max_tokens)
+    match_open = re.search(r"```(?:json)?\s*([\s\S]+)", text)
+    if match_open:
+        return json.loads(match_open.group(1).strip())
+    # JSON puro sin bloque
     return json.loads(text.strip())
 
 
@@ -59,7 +67,7 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
 
     response = client.messages.create(
         model=MODEL,
-        max_tokens=4096,
+        max_tokens=MAX_TOKENS,
         system=[
             {
                 "type": "text",
@@ -87,11 +95,12 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
 
     text = response.content[0].text if response.content else ""
 
+    print(f"  stop_reason: {response.stop_reason}  |  chars resposta: {len(text)}")
+
     try:
         data = _parse_json_from_text(text)
     except (json.JSONDecodeError, ValueError) as e:
-        print(f"  ❌  JSON inválido en respuesta de Claude: {e}")
-        print(f"  Respuesta (primeros 500 chars):\n{text[:500]}")
+        print(f"  ❌  JSON inválido: {e}")
         raise ValueError(f"Claude no devolvió JSON válido: {e}")
 
     result = _build_response(data)
