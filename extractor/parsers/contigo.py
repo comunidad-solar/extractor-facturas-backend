@@ -214,6 +214,32 @@ class ContigoParser(BaseParser):
                 pass
         return result or super().extraer_potencias_contratadas()
 
+    def extraer_consumos(self) -> dict:
+        """
+        Contigo: "P1. Energía activa  99,000 kWh  0,183657  18,18"
+        O kWh é o primeiro número após "kWh" na linha de energía activa.
+        Já capturado indiretamente em extraer_precios_energia() — reutiliza o mesmo padrão.
+        """
+        result = {}
+
+        for linha in self.linhas:
+            if "energía activa" not in linha.lower():
+                continue
+            if any(x in linha.lower() for x in ["peaje", "cargo", "importe", "bono"]):
+                continue
+
+            m_p = re.search(r"\bP([1-6])\b", linha, re.IGNORECASE)
+            m_k = re.search(r"([0-9]+[,\.][0-9]+)\s*kWh", linha, re.IGNORECASE)
+            if m_p and m_k:
+                campo = f"consumo_p{m_p.group(1)}_kwh"
+                if campo not in result:
+                    try:
+                        result[campo] = float(norm(m_k.group(1)))
+                    except (ValueError, TypeError):
+                        pass
+
+        return result or super().extraer_consumos()
+
     # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
 
     def extraer_precios_energia(self) -> None:

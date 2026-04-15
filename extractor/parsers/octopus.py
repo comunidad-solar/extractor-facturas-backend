@@ -111,3 +111,28 @@ class OctopusParser(BaseParser):
             if result:
                 break
         return result or super().extraer_potencias_contratadas()
+
+    def extraer_consumos(self) -> dict:
+        """
+        Octopus: "Punta  79,70 kWh  0,114 €/kWh  9,15 €"
+        O kWh está na linha principal de Punta/Llano/Valle.
+        """
+        result = {}
+        mapeo = {"punta": 1, "llano": 2, "valle": 3}
+
+        patron = re.compile(
+            r'^(punta|llano|valle)\s+([0-9]+[,\.][0-9]+)\s*kWh',
+            re.IGNORECASE | re.MULTILINE
+        )
+        for m in patron.finditer(self.text):
+            label   = m.group(1).lower()
+            periodo = mapeo.get(label)
+            if periodo:
+                campo = f"consumo_p{periodo}_kwh"
+                if campo not in result:
+                    try:
+                        result[campo] = float(norm(m.group(2)))
+                    except (ValueError, TypeError):
+                        pass
+
+        return result or super().extraer_consumos()

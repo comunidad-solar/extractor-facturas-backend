@@ -230,3 +230,24 @@ class EnergiaXXIParser(BaseParser):
             result["pot_p2_kw"] = float(norm(m.group(1)))
 
         return result or super().extraer_potencias_contratadas()
+
+    def extraer_consumos(self) -> dict:
+        """
+        EnergíaXXI: "Consumo en P1: 144,00 kWh / Consumo en P2: 213,00 kWh / Consumo en P3: 601,00 kWh"
+        """
+        result = {}
+
+        patron = re.compile(
+            r'[Cc]onsumo\s+en\s+P([1-3])\s*:\s*([0-9]+[,\.][0-9]*)\s*kWh',
+            re.IGNORECASE
+        )
+        for m in patron.finditer(self.text):
+            try:
+                periodo = int(m.group(1))
+                campo   = f"consumo_p{periodo}_kwh"
+                if campo not in result:
+                    result[campo] = float(norm(m.group(2)))
+            except (ValueError, TypeError):
+                pass
+
+        return result or super().extraer_consumos()

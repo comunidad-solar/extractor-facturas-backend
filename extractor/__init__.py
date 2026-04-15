@@ -118,8 +118,16 @@ def extract_from_pdf(pdf_path: str) -> ExtractionResult:
             fields[campo] = valor
             print(f"  ✅  {campo:<26} = {valor:<20} ← [PDF]")
 
+    # ── 4b. Extraer consumos del PDF ──────────────────────────────────────────
+    campos_con_pdf = parser.extraer_consumos()
+    for k, v in campos_con_pdf.items():
+        fields[k] = v
+    if campos_con_pdf:
+        for k, v in campos_con_pdf.items():
+            print(f"  ✅  {k:<26} = {v:<20} ← [PDF]")
+
     # ── 5. Completar con API Ingebau ──────────────────────────────────────────
-    # Guardar potências do PDF antes da chamada à Ingebau
+    # Guardar potências e consumos do PDF antes da chamada à Ingebau
     campos_pot_pdf = {k: v for k, v in pot_pdf.items() if v is not None}
 
     cups           = fields.get("cups")
@@ -131,6 +139,11 @@ def extract_from_pdf(pdf_path: str) -> ExtractionResult:
     # Restaurar potências do PDF — PDF prevalece sobre Ingebau
     for campo, valor in campos_pot_pdf.items():
         fields[campo] = valor
+
+    # Restaurar consumos do PDF — PDF prevalece sobre Ingebau
+    for campo, valor in campos_con_pdf.items():
+        if valor is not None:
+            fields[campo] = valor
 
     # ── 6. Resumen ────────────────────────────────────────────────────────────
     tarifa = fields.get("tarifa_acceso", "")

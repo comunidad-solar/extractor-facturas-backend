@@ -444,6 +444,68 @@ class NaturgyParser(BaseParser):
 
         return result or super().extraer_potencias_contratadas()
 
+    def extraer_consumos(self) -> dict:
+        """
+        Naturgy 2.0TD: texto concatenado pdfplumber.
+        Formato: "Consumo:Punta 64kWh / Consumo:Llano 81kWh / Consumo:Valle 153kWh"
+
+        Naturgy 3.0TD: via fitz.
+        Formato: "Consumo electricidad P1  0 kWh  0,151404€/kWh  0,00€"
+        """
+        result = {}
+
+        # ── 3.0TD: fitz ───────────────────────────────────────────────────────
+        fitz_text = self._get_fitz_text()
+        if fitz_text:
+            # O texto fitz tem kWh na linha seguinte ao "Consumo electricidad P{n}"
+            # Juntar todas as linhas numa só string colapsando newlines
+            fitz_collapsed = re.sub(r'\n+', ' ', fitz_text)
+
+            patron_fitz = re.compile(
+                r'Consumo\s+electricidad\s+P([1-6])\s+([0-9]+(?:[,\.][0-9]*)?)\s*kWh',
+                re.IGNORECASE
+            )
+            for m in patron_fitz.finditer(fitz_collapsed):
+                try:
+                    periodo = int(m.group(1))
+                    campo   = f"consumo_p{periodo}_kwh"
+                    val     = float(norm(m.group(2)))
+                    if campo not in result:
+                        result[campo] = val
+                except (ValueError, TypeError):
+                    pass
+
+        if result:
+            return result
+
+        # ── 2.0TD: pdfplumber concatenado ─────────────────────────────────────
+        mapeo = {"punta": 1, "llano": 2, "valle": 3}
+
+        for linha in self.linhas:
+            l = linha.lower()
+            if "consumo" not in l or "kwh" not in l:
+                continue
+            for label, periodo in mapeo.items():
+                if label in l:
+                    m = re.search(
+                        r"[Cc]onsumo\s*[:\-]?\s*" + label + r"\s*([0-9]+(?:[,\.][0-9]*)?)\s*kWh",
+                        linha, re.IGNORECASE
+                    )
+                    if not m:
+                        m = re.search(
+                            rf"[Cc]onsumo:?{label}([0-9]+(?:[,\.][0-9]*)?)[Kk][Ww][Hh]",
+                            linha, re.IGNORECASE
+                        )
+                    if m:
+                        campo = f"consumo_p{periodo}_kwh"
+                        if campo not in result:
+                            try:
+                                result[campo] = float(norm(m.group(1)))
+                            except (ValueError, TypeError):
+                                pass
+
+        return result or super().extraer_consumos()
+
     def extraer_descuentos(self) -> dict:
         """
         Naturgy 3.0TD: "Descuento Real Decreto-ley 17/2021  -32,77€"

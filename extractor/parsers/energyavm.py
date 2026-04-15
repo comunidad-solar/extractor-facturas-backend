@@ -89,6 +89,29 @@ class EnergyaVMParser(BaseParser):
                     result[f"pot_p{p}_kw"] = float(norm(m.group(1)))
         return result or super().extraer_potencias_contratadas()
 
+    def extraer_consumos(self) -> dict:
+        """
+        EnergyaVM: "Término de energía P1: 12,82 kWh, Precio: 0,104900 €/kWh."
+        Os kWh estão na linha de energía por período.
+        """
+        result = {}
+
+        patron = re.compile(
+            r'(?:T[eé]rmino\s+de\s+energ[ií]a\s+)?'
+            r'P([1-6])\s*:\s*([0-9]+[,\.][0-9]+)\s*kWh',
+            re.IGNORECASE
+        )
+        for m in patron.finditer(self.text):
+            try:
+                periodo = int(m.group(1))
+                campo   = f"consumo_p{periodo}_kwh"
+                if campo not in result:
+                    result[campo] = float(norm(m.group(2)))
+            except (ValueError, TypeError):
+                pass
+
+        return result or super().extraer_consumos()
+
     # ── PRECIOS DE ENERGÍA ────────────────────────────────────────────────────
 
     def extraer_precios_energia(self) -> None:
