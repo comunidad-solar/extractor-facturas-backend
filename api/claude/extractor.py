@@ -1,7 +1,8 @@
 # api/claude/extractor.py
-# Llama a la API de Claude con el PDF vía Files API (upload → file_id → delete)
-# en lugar de base64 inline. Más eficiente para PDFs grandes.
+# Llama a la API de Claude con el PDF en base64 y devuelve un
+# ExtractionResponseAI validado por Pydantic.
 
+import base64
 import json
 import re
 
@@ -35,59 +36,43 @@ def _build_response(data: dict) -> ExtractionResponseAI:
 
 
 def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
-    """Sube el PDF a la Files API, extrae datos con Claude y borra el fichero."""
+    """Envía el PDF a Claude en base64 y devuelve los datos estructurados."""
     print(f"\n{'='*70}")
     print(f"  *** API CLAUDE ***  ({MODEL})")
     print(f"{'='*70}")
     print(f"  PDF recibido: {len(pdf_bytes):,} bytes")
+    print(f"  Enviando a Claude...")
 
     client = get_client()
+    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
 
-    # 1. Subir el PDF a la Files API
-    print(f"  Subiendo PDF a Files API...")
-    file_upload = client.beta.files.upload(
-        file=("factura.pdf", pdf_bytes, "application/pdf"),
-    )
-    file_id = file_upload.id
-    print(f"  File ID: {file_id}")
-
-    try:
-        # 2. Llamar a Claude referenciando el fichero por ID
-        print(f"  Enviando a Claude...")
-        response = client.beta.messages.create(
-            model=MODEL,
-            max_tokens=4096,
-            betas=["files-api-2025-04-14"],
-            system=[
-                {
-                    "type": "text",
-                    "text": SYSTEM_PROMPT,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "document",
-                            "source": {
-                                "type": "file",
-                                "file_id": file_id,
-                            },
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=4096,
+        system=[
+            {
+                "type": "text",
+                "text": SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "document",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "application/pdf",
+                            "data": pdf_b64,
                         },
-                        {"type": "text", "text": _USER_TEXT},
-                    ],
-                }
-            ],
-        )
-    finally:
-        # 3. Borrar el fichero siempre (éxito o error)
-        try:
-            client.beta.files.delete(file_id)
-            print(f"  Fichero {file_id} eliminado de Files API")
-        except Exception as e:
-            print(f"  ⚠️  No se pudo eliminar el fichero {file_id}: {e}")
+                    },
+                    {"type": "text", "text": _USER_TEXT},
+                ],
+            }
+        ],
+    )
 
     text = response.content[0].text if response.content else ""
 
