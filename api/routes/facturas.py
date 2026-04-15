@@ -15,6 +15,7 @@ from api.claude.extractor import extract_with_claude
 from api.models import ExtractionResponseAI
 from api.routes.sesion import crear_sesion
 from api.zoho_crm import buscar_deal_por_email, buscar_mpklog_por_email
+from api.zoho_workdrive import upload_factura_files
 
 router = APIRouter(prefix="/facturas", tags=["facturas"])
 
@@ -60,8 +61,9 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
             "pe_p4": result.pe_p4, "pe_p5": result.pe_p5, "pe_p6": result.pe_p6,
         },
         "impuestos": {
-            "imp_ele": result.imp_ele,
-            "iva":     result.iva,
+            "imp_ele":         result.imp_ele,
+            "imp_ele_eur_kwh": result.imp_ele_eur_kwh,
+            "iva":             result.iva,
         },
         "otros": {
             "alq_eq_dia":      result.alq_eq_dia,
@@ -144,7 +146,7 @@ async def extraer_factura(
     result.session_id = crear_sesion(session_payload)
     print(f"  ✅  Sessão criada: {result.session_id}")
 
-    # Guardar JSON
+    # Guardar JSON local
     cups   = result.cups or "sin_cups"
     inicio = (result.periodo_inicio or "").replace("/", "-")
     fin    = (result.periodo_fin    or "").replace("/", "-")
@@ -152,5 +154,20 @@ async def extraer_factura(
     ruta   = os.path.join(RESULTADOS_DIR, nombre)
     with open(ruta, "w", encoding="utf-8") as f:
         json.dump(session_payload, f, ensure_ascii=False, indent=2)
+    print(f"  ✅  JSON local guardado: resultados/{nombre}")
+
+    # WorkDrive upload (non-blocking)
+    _nomedopdf = os.path.splitext(file.filename)[0]
+    _tarifa    = result.tarifa_acceso or "sin_tarifa"
+    print(f"  ⏳  WorkDrive: agendando upload para '{_nomedopdf}_{_tarifa}/'...")
+    asyncio.create_task(
+        upload_factura_files(
+            nomedopdf       = _nomedopdf,
+            tarifa_acceso   = _tarifa,
+            pdf_bytes       = pdf_bytes,
+            result          = result,
+            session_payload = session_payload,
+        )
+    )
 
     return result

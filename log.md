@@ -6,6 +6,91 @@
 
 ---
 
+### [055] Integração Zoho WorkDrive — upload automático após extracção
+**Prompt:** Após extracção de fatura, subir ficheiros para pasta no Zoho WorkDrive.
+
+**Ficheiros:**
+- `api/zoho_workdrive.py` — novo módulo: `refresh_workdrive_token()`, `_create_folder()`, `_upload_file()`, `_run_parser()`, `upload_factura_files()`
+- `api/routes/facturas.py` — import + `asyncio.create_task(upload_factura_files(...))` após guardar JSON local
+- `.env.example` — adicionado `ZOHO_WORKDRIVE_ACCESS_TOKEN`, `ZOHO_WORKDRIVE_REFRESH_TOKEN`, `ZOHO_WORKDRIVE_FOLDER_ID`
+
+**Mudança:**
+- Após cada extracção, cria subpasta `{nomedopdf}_{tarifa_acceso}` no WorkDrive e envia 5 ficheiros: PDF original, `claude_*.json` (resultado plano Claude), `*_processed.json` (factura aninhada), `remoto_*.json` (session_payload completo), `parser_*.json` (resultado dos parsers regex)
+- Upload fire-and-forget via `asyncio.create_task` — não bloqueia a resposta ao frontend
+- Parser corre em thread executor (`run_in_executor`) para não bloquear o event loop
+- Token refresh automático em 401, mesmo padrão de `zoho_crm.py`
+- Se `ZOHO_WORKDRIVE_FOLDER_ID` não estiver definido, upload é silenciosamente ignorado
+
+---
+
+### [054] Correcção `imp_ele_eur_kwh` — IEE em €/kWh (RDL 7/2026)
+**Prompt:** `imp_ele` null em fatura Iberdrola com IEE no formato `X kWh × 0,001 €/kWh`.
+
+**Ficheiros:**
+- `api/models.py` — adicionado `imp_ele_eur_kwh: Optional[float] = None` a `ExtractionResponseAI`
+- `api/routes/facturas.py` — `_build_factura_payload()`: adicionado `imp_ele_eur_kwh` ao bloco `impuestos`
+
+**Mudança:**
+- Antes: `imp_ele` ficava null e o valor em €/kWh era descartado
+- Depois: `imp_ele` = percentagem (formato antigo), `imp_ele_eur_kwh` = €/kWh (formato post-RDL 7/2026); prompt já instruía Claude, faltava o campo no modelo
+
+---
+
+### [053] Correcção `pp_p*` em €/kW·año → €/kW·día
+**Prompt:** `pp_p1`/`pp_p2` extraídos em €/kW·año em vez de €/kW·día em algumas facturas.
+
+**Ficheiros:**
+- `api/claude/prompts.py` — adicionado ao `_PREAMBLE`: instrução explícita para dividir por 365 quando a fatura mostra €/kW·año
+
+**Mudança:**
+- Antes: Claude devolvia o valor bruto da fatura (ex: 26.93055 €/kW·año)
+- Depois: instrução no preamble força conversão para €/kW·día (÷365) antes de escrever no JSON
+
+---
+
+### [052] Sessão actualizada em `/enviar` em vez de nova sessão
+**Prompt:** `/enviar` criava nova `session_id` em vez de actualizar a existente do `/facturas/extraer`.
+
+**Ficheiros:**
+- `api/routes/sesion.py` — adicionados `leer_sesion()` e `actualizar_sesion()`
+- `api/routes/enviar.py` — usa `leer_sesion()` para recuperar `factura` do Claude; `actualizar_sesion()` em vez de `crear_sesion()` quando `session_id` presente; remove `factura.archivo` e `factura.api` do payload
+
+**Mudança:**
+- Antes: cada chamada a `/enviar` criava um UUID novo; `factura` vinha sempre do frontend (com `archivo`, `api`, etc.)
+- Depois: se o frontend enviar `session_id` no payload, a sessão existente é actualizada com o mesmo UUID; `factura` é substituído pelo do Claude (limpo, com estrutura aninhada)
+
+---
+
+### [051] Estrutura aninhada no payload da sessão (`_build_factura_payload`)
+**Prompt:** `factura` no payload da sessão deve ter estrutura aninhada igual ao `/enviar`.
+
+**Ficheiros:**
+- `api/routes/facturas.py` — adicionado `_build_factura_payload(result)` que produz `potencias_kw`, `consumos_kwh`, `precios_potencia`, `precios_energia`, `impuestos`, `otros`, `archivo`
+
+**Mudança:**
+- Antes: `factura` na sessão era o `model_dump()` plano do `ExtractionResponseAI`
+- Depois: `factura` usa a mesma estrutura aninhada consumida pelo frontend e pelo Zoho Flow
+
+---
+
+### [050] `/facturas/extraer` redireccionado para Claude; Ingebau desactivada
+**Prompt:** Desactivar chamada Ingebau, manter só Claude; incluir `dealId`/`mpklogId` e campo `data` com cliente/ce/Fsmstate.
+
+**Ficheiros:**
+- `api/routes/facturas.py` — endpoint reescrito: Claude como único extractor, lookup Zoho CRM paralelo, criação de sessão, exclusão de `api_ok`/`api_error`/`fichero_json` da resposta
+- `api/claude/extractor.py` — abandono de `messages.parse(output_format=...)` (limite 24 parâmetros opcionais, timeout de compilação de gramática); substituído por `messages.create()` + parsing regex do bloco ```json```; suporte a resposta truncada; `MAX_TOKENS` aumentado para 8192
+- `api/claude/client.py` — chave API lida de `os.environ["ANTHROPIC_API_KEY"]` (via `dotenv`)
+
+---
+
+### [049] Correcção campo `otros` — string JSON → dict
+**Prompt:** Erro de validação Pydantic: `otros` devolvido pelo Claude como string JSON, modelo espera dict.
+
+**Ficheiros:**
+- `api/claude/extractor.py` — `_build_response()`: converte `otros` e `descuentos` de string para dict se necessário
+
+---
+
 ### [048] Novo endpoint `POST /facturas/extraer-ai` via Claude API
 **Prompt:** Integrar Claude API como caminho de extracção primário. O payload extraído deve ser enviado para `/sesion` e devolver `session_id`.
 

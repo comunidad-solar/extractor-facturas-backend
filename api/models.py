@@ -96,6 +96,9 @@ class ExtractionResponseAI(ExtractionResponse):
     """Extiende ExtractionResponse con importes en € extraídos por Claude
     y los campos de reconciliación contable (R13)."""
 
+    # IEE en €/kWh (formato post RDL 7/2026 — null si viene como porcentaje)
+    imp_ele_eur_kwh:            Optional[float] = None
+
     # Importes en € de cada línea de la factura (extraídos por Claude)
     imp_termino_energia_eur:    Optional[float] = None
     imp_termino_potencia_eur:   Optional[float] = None
