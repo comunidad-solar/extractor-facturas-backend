@@ -1,0 +1,96 @@
+{
+  "cups": null,
+  "periodo_inicio": "31/08/2025",
+  "periodo_fin": "30/09/2025",
+  "dias_facturados": "30",
+  "comercializadora": "IBERDROLA CLIENTES, S.A.U.",
+  "distribuidora": "i-DE, Redes Eléctricas Inteligentes, S.A.U.",
+  "tarifa_acceso": "3.0TD",
+
+  "pp_p1": 0.057178,
+  "pp_p2": 0.030959,
+  "pp_p3": 0.018438,
+  "pp_p4": 0.014219,
+  "pp_p5": 0.008411,
+  "pp_p6": 0.005671,
+  "pe_p1": 0.196,
+  "pe_p2": null,
+  "pe_p3": null,
+  "pe_p4": null,
+  "pe_p5": null,
+  "pe_p6": null,
+  "pot_p1_kw": 25,
+  "pot_p2_kw": 25,
+  "pot_p3_kw": 25,
+  "pot_p4_kw": 25,
+  "pot_p5_kw": 25,
+  "pot_p6_kw": 50,
+
+  "energia_facturada_kwh": 675,
+  "consumo_p1_kwh": 0,
+  "consumo_p2_kwh": 0,
+  "consumo_p3_kwh": 286,
+  "consumo_p4_kwh": 199,
+  "consumo_p5_kwh": 0,
+  "consumo_p6_kwh": 190,
+
+  "imp_ele": 5.11269632,
+  "imp_ele_eur_kwh": null,
+  "iva": 21,
+  "iva_reducido": null,
+  "alq_eq_dia": 0.197918,
+  "bono_social": 0.012742,
+
+  "compensacion_excedentes_kwh": null,
+  "compensacion_excedentes_importe_eur": null,
+
+  "descuentos": {
+    "Descuento sobre consumo 20%": -26.46
+  },
+
+  "importe_factura": 276.35,
+
+  "otros": {},
+
+  "energia_reactiva_kvarh": {
+    "p1": 0,
+    "p2": 0,
+    "p3": 52,
+    "p4": 47,
+    "p5": 0,
+    "p6": 1
+  },
+
+  "maximetros_kw": {
+    "p1": 0,
+    "p2": 0,
+    "p3": 13.59,
+    "p4": 10.13,
+    "p5": 0,
+    "p6": 3.78
+  },
+
+  "validacion_cuadre": {
+    "potencia_total_calc": 105.41,
+    "energia_facturada_calc": 132.30,
+    "descuentos_total_calc": -26.46,
+    "compensacion_excedentes_calc": 0,
+    "bono_social_calc": 0.38,
+    "impuesto_electricidad_calc": 10.82,
+    "alquiler_contador_calc": 5.94,
+    "otros_calc": 0,
+    "iva_total_calc": 47.96,
+    "suma_conceptos": 276.35,
+    "importe_factura_pdf": 276.35,
+    "diferencia_eur": 0.00,
+    "tolerancia_eur": 0.02,
+    "cuadra": true
+  },
+
+  "error": null,
+
+  "advertencias_pdf": [
+    "PDF contiene 2 facturas concatenadas — esta es la primera (contrato 783126943, C/Dublin)",
+    "Sólo páginas 1-2 de las 4 originales disponibles; CUPS, NIF titular, IBAN y mix energético no extraídos"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "cups": "ES0021000005745673XV",
+  "periodo_inicio": "31/10/2024",
+  "periodo_fin": "30/11/2024",
+  "dias_facturados": "30",
+  "comercializadora": "IBERDROLA CLIENTES, S.A.U",
+  "distribuidora": "i-DE, Redes Eléctricas Inteligentes, S.A.U.",
+  "tarifa_acceso": "2.0TD",
+
+  "pp_p1": 0.113358,
+  "pp_p2": 0.036831,
+  "pp_p3": null,
+  "pp_p4": null,
+  "pp_p5": null,
+  "pp_p6": null,
+  "pe_p1": 0.142855,
+  "pe_p2": null,
+  "pe_p3": null,
+  "pe_p4": null,
+  "pe_p5": null,
+  "pe_p6": null,
+  "pot_p1_kw": 6.9,
+  "pot_p2_kw": 6.9,
+  "pot_p3_kw": 0,
+  "pot_p4_kw": 0,
+  "pot_p5_kw": 0,
+  "pot_p6_kw": 0,
+
+  "energia_facturada_kwh": 1461.72,
+  "consumo_p1_kwh": 247,
+  "consumo_p2_kwh": 364,
+  "consumo_p3_kwh": 878,
+  "consumo_p4_kwh": 0,
+  "consumo_p5_kwh": 0,
+  "consumo_p6_kwh": 0,
+
+  "imp_ele": 5.11269632,
+  "imp_ele_eur_kwh": null,
+  "iva": 21,
+  "iva_reducido": 10,
+  "alq_eq_dia": 0.026557,
+  "bono_social": 0.006282,
+
+  "compensacion_excedentes_kwh": -225.73,
+  "compensacion_excedentes_importe_eur": -18.06,
+
+  "descuentos": {
+    "Descuento sobre consumo 10%": -20.88,
+    "Descuento sobre consumo 5%": -10.44
+  },
+
+  "importe_factura": 232.22,
+
+  "otros": {
+    "Pack Iberdrola Hogar": 8.95
+  },
+
+  "smart_solar": {
+    "ahorro_periodo_eur": 71.49,
+    "ahorro_autoconsumo_eur": 45.35,
+    "ahorro_excedentes_eur": 18.06,
+    "ahorro_impuestos_eur": 8.08,
+    "energia_generada_kwh": 543.16,
+    "energia_autoconsumida_kwh": 317.43,
+    "energia_exportada_red_kwh": 225.73,
+    "energia_consumida_total_kwh": 1779.15,
+    "energia_consumida_red_kwh": 1461.72,
+    "ahorro_acumulado_eur": 18.89,
+    "fecha_alta": "06/06/2024"
+  },
+
+  "validacion_cuadre": {
+    "potencia_total_calc": 31.09,
+    "energia_facturada_calc": 208.81,
+    "descuentos_total_calc": -31.32,
+    "compensacion_excedentes_calc": -18.06,
+    "bono_social_calc": 0.19,
+    "impuesto_electricidad_calc": 9.75,
+    "alquiler_contador_calc": 0.80,
+    "otros_calc": 8.95,
+    "iva_total_calc": 22.01,
+    "suma_conceptos": 232.22,
+    "importe_factura_pdf": 232.22,
+    "diferencia_eur": 0.00,
+    "tolerancia_eur": 0.02,
+    "cuadra": true
+  },
+
+  "error": null
+}

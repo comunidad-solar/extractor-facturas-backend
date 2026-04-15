@@ -1,0 +1,85 @@
+{
+  "cups": "ES0021000006015493NR1F",
+  "periodo_inicio": "20/10/2025",
+  "periodo_fin": "20/11/2025",
+  "dias_facturados": "31",
+  "comercializadora": "Repsol",
+  "distribuidora": "I-DE Redes El\u00e9ctricas Inteligentes, SAU",
+  "tarifa_acceso": "2.0TD",
+
+  "pp_p1": 0.070958904,
+  "pp_p2": 0.070958904,
+  "pp_p3": null,
+  "pp_p4": null,
+  "pp_p5": null,
+  "pp_p6": null,
+
+  "pe_p1": 0.1459,
+  "pe_p2": null,
+  "pe_p3": null,
+  "pe_p4": null,
+  "pe_p5": null,
+  "pe_p6": null,
+
+  "pot_p1_kw": 5.75,
+  "pot_p2_kw": 5.75,
+  "pot_p3_kw": null,
+  "pot_p4_kw": null,
+  "pot_p5_kw": null,
+  "pot_p6_kw": null,
+
+  "energia_facturada_kwh": 205.0,
+
+  "consumo_p1_kwh": 64.0,
+  "consumo_p2_kwh": 53.0,
+  "consumo_p3_kwh": 88.0,
+  "consumo_p4_kwh": null,
+  "consumo_p5_kwh": null,
+  "consumo_p6_kwh": null,
+
+  "imp_ele": 5.11269632,
+  "imp_ele_eur_kwh": null,
+  "iva": 21,
+  "iva_reducido": null,
+  "iva_reducido_base": null,
+  "iva_reducido_importe": null,
+  "iva_general_base": null,
+  "iva_general_importe": null,
+
+  "alq_eq_dia": 0.026774,
+  "bono_social": 0.012742,
+
+  "compensacion_excedentes_kwh": null,
+  "compensacion_excedentes_importe_eur": null,
+
+  "descuentos": {},
+
+  "importe_factura": 76.81,
+
+  "otros": {
+    "Tu Asistente 24h": 4.20
+  },
+
+  "validacion_cuadre": {
+    "potencia_total_calc": 25.30,
+    "energia_facturada_calc": 29.91,
+    "descuentos_total_calc": 0.0,
+    "compensacion_excedentes_calc": 0.0,
+    "bono_social_calc": 0.40,
+    "impuesto_electricidad_calc": 2.84,
+    "alquiler_contador_calc": 0.83,
+    "otros_calc": 4.20,
+    "iva_total_calc": 13.33,
+    "suma_conceptos": 76.81,
+    "importe_factura_pdf": 76.81,
+    "diferencia_eur": 0.00,
+    "tolerancia_eur": 0.02,
+    "cuadra": true
+  },
+
+  "error": null,
+
+  "api_ok": null,
+  "api_error": null,
+  "fichero_json": "REPSOL 2.0TD._processed.json"
+}
