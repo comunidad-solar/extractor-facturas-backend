@@ -54,3 +54,32 @@ class ExtractionResponse(BaseModel):
     api_ok:             bool            = False
     api_error:          Optional[str]   = None
     fichero_json:       Optional[str]   = None
+
+
+class ValidacionCuadre(BaseModel):
+    cuadra:             bool
+    importe_factura:    Optional[float] = None
+    suma_conceptos:     Optional[float] = None
+    diferencia_eur:     Optional[float] = None
+    error:              Optional[str]   = None
+
+
+class ExtractionResponseAI(ExtractionResponse):
+    """Extiende ExtractionResponse con importes en € extraídos por Claude
+    y los campos de reconciliación contable (R13)."""
+
+    # Importes en € de cada línea de la factura (extraídos por Claude)
+    imp_termino_energia_eur:    Optional[float] = None
+    imp_termino_potencia_eur:   Optional[float] = None
+    imp_impuesto_electrico_eur: Optional[float] = None
+    imp_alquiler_eur:           Optional[float] = None
+    imp_iva_eur:                Optional[float] = None
+
+    # Conceptos no estándar (Pack Iberdrola, Asistencia PYMES, etc.)
+    otros:              Optional[dict]              = None
+
+    # Reconciliación contable R13 (calculada en el servidor)
+    validacion_cuadre:  Optional[ValidacionCuadre]  = None
+
+    # ID de sesión creada en /sesion tras la extracción
+    session_id:         Optional[str]               = None
