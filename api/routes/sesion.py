@@ -27,6 +27,30 @@ def crear_sesion(data: Any) -> str:
     return session_id
 
 
+def leer_sesion(session_id: str) -> Any | None:
+    """Devuelve los datos de la sesión o None si no existe/expiró."""
+    entry = _store.get(session_id)
+    if entry is None:
+        return None
+    if datetime.utcnow() > entry["expires_at"]:
+        del _store[session_id]
+        return None
+    return entry["data"]
+
+
+def actualizar_sesion(session_id: str, data: Any) -> bool:
+    """Actualiza los datos de una sesión existente. Devuelve False si no existe o expiró."""
+    entry = _store.get(session_id)
+    if entry is None:
+        return False
+    if datetime.utcnow() > entry["expires_at"]:
+        del _store[session_id]
+        return False
+    entry["data"] = data
+    entry["expires_at"] = datetime.utcnow() + timedelta(minutes=_TTL_MINUTES)  # renueva TTL
+    return True
+
+
 @router.post("")
 async def post_sesion(body: Any = None):
     session_id = crear_sesion(body)

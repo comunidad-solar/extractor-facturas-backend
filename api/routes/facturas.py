@@ -24,6 +24,55 @@ os.makedirs(RESULTADOS_DIR, exist_ok=True)
 _EXCLUDE = {"api_ok", "api_error", "fichero_json"}
 
 
+def _build_factura_payload(result: ExtractionResponseAI) -> dict:
+    """Convierte el resultado plano de Claude al formato anidado usado por /enviar."""
+    descuentos = dict(result.descuentos or {})
+    if result.bono_social:
+        descuentos["bono_social"] = result.bono_social
+
+    otros_extra = dict(result.otros or {})
+
+    return {
+        "cups":             result.cups,
+        "comercializadora": result.comercializadora,
+        "distribuidora":    result.distribuidora,
+        "tarifa_acceso":    result.tarifa_acceso,
+        "periodo_inicio":   result.periodo_inicio,
+        "periodo_fin":      result.periodo_fin,
+        "dias_facturados":  result.dias_facturados,
+        "importe_factura":  result.importe_factura,
+        "potencias_kw": {
+            "p1": result.pot_p1_kw, "p2": result.pot_p2_kw,
+            "p3": result.pot_p3_kw, "p4": result.pot_p4_kw,
+            "p5": result.pot_p5_kw, "p6": result.pot_p6_kw,
+        },
+        "consumos_kwh": {
+            "p1": result.consumo_p1_kwh, "p2": result.consumo_p2_kwh,
+            "p3": result.consumo_p3_kwh, "p4": result.consumo_p4_kwh,
+            "p5": result.consumo_p5_kwh, "p6": result.consumo_p6_kwh,
+        },
+        "precios_potencia": {
+            "p1": result.pp_p1, "p2": result.pp_p2, "p3": result.pp_p3,
+            "p4": result.pp_p4, "p5": result.pp_p5, "p6": result.pp_p6,
+        },
+        "precios_energia": {
+            "pe_p1": result.pe_p1, "pe_p2": result.pe_p2, "pe_p3": result.pe_p3,
+            "pe_p4": result.pe_p4, "pe_p5": result.pe_p5, "pe_p6": result.pe_p6,
+        },
+        "impuestos": {
+            "imp_ele": result.imp_ele,
+            "iva":     result.iva,
+        },
+        "otros": {
+            "alq_eq_dia":      result.alq_eq_dia,
+            "cuotaAlquilerMes": None,
+            "descuentos":      descuentos,
+            **otros_extra,
+        },
+        "archivo": {},
+    }
+
+
 @router.post("/extraer", response_model=ExtractionResponseAI,
              response_model_exclude=_EXCLUDE)
 async def extraer_factura(
@@ -85,13 +134,9 @@ async def extraer_factura(
         extra["cliente"]["mpklogId"] = mpklog_id
 
     # Construir payload completo para la sesión
-    factura_payload = {
-        k: v for k, v in result.model_dump().items()
-        if k not in _EXCLUDE
-    }
     session_payload = {
-        **extra,                      # cliente, ce, Fsmstate, FsmPrevious, ...
-        "factura":  factura_payload,  # datos extraídos por Claude
+        **extra,                             # cliente, ce, Fsmstate, FsmPrevious, ...
+        "factura":  _build_factura_payload(result),
         "dealId":   deal_id,
         "mpklogId": mpklog_id,
     }

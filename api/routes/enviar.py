@@ -11,7 +11,7 @@ from fastapi import APIRouter, Form, HTTPException
 from typing import Any, Dict
 
 from api.zoho_crm import buscar_deal_por_email, buscar_mpklog_por_email
-from api.routes.sesion import crear_sesion
+from api.routes.sesion import crear_sesion, actualizar_sesion, leer_sesion
 
 ZOHO_WEBHOOK = (
     "https://flow.zoho.eu/20067915739/flow/webhook/incoming"
@@ -80,23 +80,32 @@ async def enviar_datos(
         else:
             print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
-    # --- 4. Criar sessão ---
-    session_payload = {**parsed, "dealId": deal_id, "mpklogId": mpklog_id}
+    # --- 4. Usar factura extraída por Claude (da sessão) se disponível ---
+    existing_session_id = parsed.get("session_id")
+    existing_session = leer_sesion(existing_session_id) if existing_session_id else None
+
+    if existing_session and "factura" in existing_session:
+        factura = existing_session["factura"]
+        print(f"[/enviar] factura obtida da sessão Claude ({existing_session_id})")
+    else:
+        # Fallback: usar factura do frontend, removendo campos legados
+        factura = dict(parsed.get("factura") or {})
+        factura.pop("archivo", None)
+        factura.pop("api", None)
+        print(f"[/enviar] factura obtida do payload do frontend (sem sessão prévia)")
+
+    # --- 5. Actualizar ou criar sessão ---
+    session_payload = {**parsed, "factura": factura, "dealId": deal_id, "mpklogId": mpklog_id}
     # Actualizar também dentro de cliente para evitar duplicação
     if "cliente" in session_payload:
         session_payload["cliente"]["dealId"]   = deal_id
         session_payload["cliente"]["mpklogId"] = mpklog_id
-    # Injectar descuentos em factura.otros e mover bono_social para dentro de descuentos
-    factura = session_payload.get("factura", {})
-    if "otros" not in factura:
-        factura["otros"] = {}
-    descuentos = factura.get("descuentos") or {}
-    bono_social = factura["otros"].pop("bono_social", None)
-    if bono_social is not None:
-        descuentos["bono_social"] = bono_social
-    factura["otros"]["descuentos"] = descuentos
-    session_payload["factura"] = factura
-    session_id = crear_sesion(session_payload)
-    print(f"[/enviar] Sessão criada: {session_id}")
+
+    if existing_session_id and actualizar_sesion(existing_session_id, session_payload):
+        session_id = existing_session_id
+        print(f"[/enviar] Sessão actualizada: {session_id}")
+    else:
+        session_id = crear_sesion(session_payload)
+        print(f"[/enviar] Sessão criada (nova): {session_id}")
 
     return {"ok": True, "dealId": deal_id, "mpklogId": mpklog_id, "session_id": session_id}
