@@ -1,18 +1,44 @@
 # api/claude/extractor.py
 # Llama a la API de Claude con el PDF en base64 y devuelve un
 # ExtractionResponseAI validado por Pydantic.
+#
+# Usa ClaudeExtractionInput (21 campos) como output_format para respetar
+# el límite de 24 parámetros opcionales de la API de structured outputs,
+# y después mapea el resultado a ExtractionResponseAI.
 
 import base64
 
 from api.claude.client import get_client
 from api.claude.prompts import SYSTEM_PROMPT
-from api.models import ExtractionResponseAI
+from api.models import ClaudeExtractionInput, ExtractionResponseAI
 
 MODEL = "claude-sonnet-4-6"
+
+# Campos de ExtractionResponseAI que pueden llegar en el dict 'otros'
+# cuando la tarifa tiene más de 2 períodos de potencia o 3 de energía
+_EXTRA_PERIOD_FIELDS = {"pp_p3", "pp_p4", "pp_p5", "pp_p6", "pe_p4", "pe_p5", "pe_p6"}
 
 _USER_TEXT = (
     "Extrae todos los datos de esta factura según las instrucciones del sistema."
 )
+
+
+def _map_to_response(raw: ClaudeExtractionInput) -> ExtractionResponseAI:
+    """Convierte ClaudeExtractionInput → ExtractionResponseAI.
+    Los campos de períodos extra (pp_p3..p6, pe_p4..p6) pueden venir
+    en el dict 'otros' — se promueven a sus campos propios."""
+    data = raw.model_dump()
+    otros: dict = data.pop("otros") or {}
+
+    # Promover campos de período extra desde 'otros' a sus campos propios
+    otros_restantes = {}
+    for k, v in otros.items():
+        if k in _EXTRA_PERIOD_FIELDS:
+            data[k] = v
+        else:
+            otros_restantes[k] = v
+
+    return ExtractionResponseAI(**data, otros=otros_restantes or None)
 
 
 def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
@@ -52,12 +78,14 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
                 ],
             }
         ],
-        output_format=ExtractionResponseAI,
+        output_format=ClaudeExtractionInput,
     )
 
-    result = response.parsed_output
-    if result is None:
+    raw = response.parsed_output
+    if raw is None:
         raise ValueError("Claude no devolvió un objeto estructurado válido")
+
+    result = _map_to_response(raw)
 
     usage = response.usage
     print(f"  ✅  Extracción completada")

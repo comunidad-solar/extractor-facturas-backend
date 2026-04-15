@@ -36,10 +36,15 @@ async def extraer_factura(file: UploadFile = File(...)):
     try:
         result = extract_with_claude(pdf_bytes)
     except anthropic.APIStatusError as e:
-        raise HTTPException(status_code=502, detail=f"Error de la API de Claude: {e.message}")
+        print(f"  ❌  APIStatusError {e.status_code}: {e}")
+        raise HTTPException(status_code=502, detail=f"Error de la API de Claude ({e.status_code}): {e}")
     except anthropic.APITimeoutError:
+        print("  ❌  APITimeoutError")
         raise HTTPException(status_code=504, detail="Timeout llamando a la API de Claude.")
     except Exception as e:
+        import traceback
+        print(f"  ❌  Error inesperado: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
 
     # Crear sesión con el payload extraído
