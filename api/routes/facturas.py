@@ -238,12 +238,19 @@ def _log_cuadre(result: ExtractionResponseAI) -> None:
     if bono:
         row("  Bono social", "campo bono_social", -bono)
 
-    # Descuentos línea a línea
+    # Créditos/descuentos línea a línea (de otros.creditos)
+    otros_raw_log   = result.otros or {}
+    costes_dict     = otros_raw_log.get("costes") or {}
+    creditos_dict   = otros_raw_log.get("creditos") or {}
+    # Migración backward-compat: si creditos vacío, leer de result.descuentos
+    if not creditos_dict and result.descuentos:
+        creditos_dict = {k: v for k, v in result.descuentos.items()
+                         if isinstance(v, (int, float))}
     desc_sum = 0.0
-    for nombre, val in (result.descuentos or {}).items():
-        if isinstance(val, (int, float)):
+    for nombre, val in creditos_dict.items():
+        if isinstance(val, (int, float)) and val is not None:
             desc_sum += val
-            row(f"  Dto: {nombre[:24]}", "descuentos[...]", val)
+            row(f"  Cred: {nombre[:23]}", "otros.creditos", val)
 
     # IVA — mostrar % × base si disponible
     if not iva_eur and result.iva:
@@ -259,17 +266,22 @@ def _log_cuadre(result: ExtractionResponseAI) -> None:
     # ════════════════════════════════════════════════════════
     # BLOQUE OTROS
     # ════════════════════════════════════════════════════════
-    otros_items = {
-        k: v for k, v in (result.otros or {}).items()
-        if isinstance(v, (int, float)) and k not in ("alq_eq_dia", "cuotaAlquilerMes")
-    }
-    otros_sum = sum(otros_items.values())
-    if otros_items:
+    _skip_costes = {"alquiler_equipos_medida_importe", "bono_social_importe"}
+    otros_sum = sum(
+        v for k, v in costes_dict.items()
+        if isinstance(v, (int, float)) and v is not None
+        and k not in _skip_costes
+    )
+    if costes_dict or creditos_dict:
         sep()
         print(f"  │  {'OTROS CONCEPTOS':<{W-4}}│")
         sep()
-        for nombre, val in otros_items.items():
-            row(f"  {nombre[:30]}", "otros[...]", val)
+        for nombre, val in costes_dict.items():
+            if isinstance(val, (int, float)) and val is not None:
+                row(f"  costes.{nombre[:26]}", "otros.costes", val)
+        for nombre, val in creditos_dict.items():
+            if isinstance(val, (int, float)) and val is not None:
+                row(f"  creditos.{nombre[:24]}", "otros.creditos", val)
 
     # ════════════════════════════════════════════════════════
     # TOTALES
