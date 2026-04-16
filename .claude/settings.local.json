@@ -24,7 +24,9 @@
       "Bash(py -3.12 -m pip install pdfplumber pymupdf)",
       "Bash(findstr :8000)",
       "Bash(taskkill /PID 11324 /F)",
-      "Bash(py -3.13 -c \"from api.main import app; print\\('OK'\\)\")"
+      "Bash(py -3.13 -c \"from api.main import app; print\\('OK'\\)\")",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
