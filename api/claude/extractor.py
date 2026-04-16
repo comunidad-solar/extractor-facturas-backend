@@ -22,19 +22,81 @@ _USER_TEXT = (
 )
 
 
+def _sanitize_json(raw: str) -> str:
+    """
+    Limpia JSON-like text generado por Claude:
+      - Elimina comentarios // de línea (respetando strings)
+      - Elimina comentarios /* ... */
+      - Elimina trailing commas antes de } o ]
+    """
+    result = []
+    i = 0
+    n = len(raw)
+    in_string = False
+
+    while i < n:
+        c = raw[i]
+
+        # Escape dentro de string → pasar tal cual
+        if in_string and c == '\\' and i + 1 < n:
+            result.append(c)
+            result.append(raw[i + 1])
+            i += 2
+            continue
+
+        # Límites de string
+        if c == '"':
+            in_string = not in_string
+            result.append(c)
+            i += 1
+            continue
+
+        if not in_string:
+            # Comentario de línea //
+            if c == '/' and i + 1 < n and raw[i + 1] == '/':
+                while i < n and raw[i] != '\n':
+                    i += 1
+                continue
+            # Comentario de bloque /* ... */
+            if c == '/' and i + 1 < n and raw[i + 1] == '*':
+                i += 2
+                while i < n - 1:
+                    if raw[i] == '*' and raw[i + 1] == '/':
+                        i += 2
+                        break
+                    i += 1
+                continue
+
+        result.append(c)
+        i += 1
+
+    clean = ''.join(result)
+    # Trailing commas: ,  }  o  ,  ]
+    clean = re.sub(r',(\s*[}\]])', r'\1', clean)
+    return clean
+
+
 def _parse_json_from_text(text: str) -> dict:
     """Extrae y parsea el JSON del texto de respuesta de Claude.
-    Maneja bloques ```json cerrados, no cerrados (truncados) y JSON puro."""
+    Maneja bloques ```json cerrados, no cerrados (truncados) y JSON puro.
+    Sanea comentarios JS y trailing commas antes de parsear."""
+
+    def _load(raw: str) -> dict:
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            return json.loads(_sanitize_json(raw))
+
     # Bloque ```json ... ``` cerrado
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
     if match:
-        return json.loads(match.group(1))
+        return _load(match.group(1))
     # Bloque ```json sin cerrar (respuesta truncada por max_tokens)
     match_open = re.search(r"```(?:json)?\s*([\s\S]+)", text)
     if match_open:
-        return json.loads(match_open.group(1).strip())
+        return _load(match_open.group(1).strip())
     # JSON puro sin bloque
-    return json.loads(text.strip())
+    return _load(text.strip())
 
 
 def _build_response(data: dict) -> ExtractionResponseAI:
