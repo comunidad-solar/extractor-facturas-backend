@@ -55,6 +55,10 @@ def _build_response(data: dict) -> ExtractionResponseAI:
             except (json.JSONDecodeError, ValueError):
                 filtered[field] = None
 
+    # dias_facturados debe ser string (Claude a veces devuelve int)
+    if "dias_facturados" in filtered and not isinstance(filtered["dias_facturados"], str):
+        filtered["dias_facturados"] = str(filtered["dias_facturados"]) if filtered["dias_facturados"] is not None else None
+
     # Dict → IVABlock
     iva_val = filtered.get("IVA")
     if isinstance(iva_val, dict):
