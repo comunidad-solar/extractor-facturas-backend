@@ -1,5 +1,5 @@
 # ── Markdown notes (documentación local, no versionada) ──────────────────────
-*.md
+
 !log.md
 !docs/**/*.md
 .env
@@ -13,7 +13,6 @@ informe.md
 cambios.md
 
 # ── Carpetas locales / generadas ─────────────────────────────────────────────
-.claude/
 facturas/
 improvements/
 
