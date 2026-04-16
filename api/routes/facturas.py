@@ -51,6 +51,29 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
     # IVA bloque
     iva_block = result.IVA.model_dump() if result.IVA else None
 
+    # ── importes_totalizados: base de Claude + todos os campos com "importe" ──
+    importes_totalizados = dict(otros_raw.get("importes_totalizados") or {})
+
+    # Campos raíz com "importe" no nome
+    _raiz_importes = {
+        "importe_factura":               result.importe_factura,
+        "impuesto_electricidad_importe": result.impuesto_electricidad_importe,
+        "alquiler_equipos_medida_importe": result.alquiler_equipos_medida_importe,
+    }
+    for k, v in _raiz_importes.items():
+        if v is not None:
+            importes_totalizados.setdefault(k, v)
+
+    # Campos de otros.costes com "importe" no nome
+    for k, v in costes.items():
+        if "importe" in k and v is not None:
+            importes_totalizados.setdefault(k, v)
+
+    # Campos de otros.creditos com "importe" no nome
+    for k, v in creditos.items():
+        if "importe" in k and v is not None:
+            importes_totalizados.setdefault(k, v)
+
     return {
         # ── Campos de identificação ───────────────────────────────────────────
         "cups":             result.cups,
@@ -114,7 +137,7 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
             "IVA":             iva_block,
         },
         "otros": {
-            "importes_totalizados": otros_raw.get("importes_totalizados"),
+            "importes_totalizados": importes_totalizados,
             "alq_eq_dia":       result.alq_eq_dia,   # mantido para retrocompat
             "cuotaAlquilerMes": None,
             "costes":           costes,
@@ -238,26 +261,9 @@ def _log_cuadre(result: ExtractionResponseAI) -> None:
             fml_alq = f"{result.alq_eq_dia} €/día × {dias}d"
         row("  Alquiler contador", fml_alq, alquiler_eur)
 
-    if bono:
-        row("  Bono social", "campo bono_social", -bono)
-
-    # Créditos/descuentos línea a línea (de otros.creditos)
-    otros_raw_log   = result.otros or {}
-    costes_dict     = otros_raw_log.get("costes") or {}
-    creditos_dict   = otros_raw_log.get("creditos") or {}
-    # Migración backward-compat: si creditos vacío, leer de result.descuentos
-    if not creditos_dict and result.descuentos:
-        creditos_dict = {k: v for k, v in result.descuentos.items()
-                         if isinstance(v, (int, float))}
-    desc_sum = 0.0
-    for nombre, val in creditos_dict.items():
-        if isinstance(val, (int, float)) and val is not None:
-            desc_sum += val
-            row(f"  Cred: {nombre[:23]}", "otros.creditos", val)
-
     # IVA — mostrar % × base si disponible
     if not iva_eur and result.iva:
-        iva_base = pot_total + ene_total + iee_eur + alquiler_eur - bono + desc_sum
+        iva_base = pot_total + ene_total + iee_eur + alquiler_eur
         iva_eur  = iva_base * result.iva / 100
         row("  IVA (*calc)", f"{result.iva}% × base", iva_eur, estimado=True)
     elif iva_eur:
@@ -267,30 +273,35 @@ def _log_cuadre(result: ExtractionResponseAI) -> None:
         row("  IVA", fml_iva, iva_eur)
 
     # ════════════════════════════════════════════════════════
-    # BLOQUE OTROS
+    # BLOQUE OTROS — informativo, NO entra en la suma
+    # Los imp_termino_* ya incluyen todos los costes y créditos.
     # ════════════════════════════════════════════════════════
-    _skip_costes = {"alquiler_equipos_medida_importe", "bono_social_importe"}
-    otros_sum = sum(
-        v for k, v in costes_dict.items()
-        if isinstance(v, (int, float)) and v is not None
-        and k not in _skip_costes
-    )
+    otros_raw_log   = result.otros or {}
+    costes_dict     = otros_raw_log.get("costes") or {}
+    creditos_dict   = otros_raw_log.get("creditos") or {}
+    if not creditos_dict and result.descuentos:
+        creditos_dict = {k: v for k, v in result.descuentos.items()
+                         if isinstance(v, (int, float))}
     if costes_dict or creditos_dict:
         sep()
-        print(f"  │  {'OTROS CONCEPTOS':<{W-4}}│")
+        print(f"  │  {'OTROS CONCEPTOS (info — ya incluido en imp_termino_*)':<{W-4}}│")
         sep()
         for nombre, val in costes_dict.items():
             if isinstance(val, (int, float)) and val is not None:
-                row(f"  costes.{nombre[:26]}", "otros.costes", val)
+                row(f"  costes.{nombre[:26]}", "info", val)
         for nombre, val in creditos_dict.items():
+            if "kwh" in nombre.lower():
+                # Bug 1: campo kWh — no es monetario, no entra en cuadre
+                print(f"  │     [kWh — excluido del cuadre] {nombre}: {val} kWh{'':<{W-45}}│")
+                continue
             if isinstance(val, (int, float)) and val is not None:
-                row(f"  creditos.{nombre[:24]}", "otros.creditos", val)
+                row(f"  creditos.{nombre[:24]}", "info", val)
 
     # ════════════════════════════════════════════════════════
-    # TOTALES
+    # TOTALES — solo imp_termino_* (Bug 2: otros no se suma)
     # ════════════════════════════════════════════════════════
     sep()
-    suma = pot_total + ene_total + iee_eur + alquiler_eur + iva_eur - bono + desc_sum + otros_sum
+    suma = pot_total + ene_total + iee_eur + alquiler_eur + iva_eur
     diff = abs(suma - importe)
     pct  = (diff / importe * 100) if importe else 0.0
     ok   = pct <= 5.0
