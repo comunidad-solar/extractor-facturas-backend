@@ -1,7 +1,7 @@
 # extractor/base.py
 # Utilidades compartidas: helpers de texto, fechas, logs y ExtractionResult.
 # Importado por todos los módulos del paquete extractor.
-#
+# test
 # Modificado: 2026-02-26 | Rodrigo Costa
 
 import re
