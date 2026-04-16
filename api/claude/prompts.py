@@ -22,9 +22,19 @@ _PREAMBLE = (
     "conceptos no estándar, etc. Ejemplo: '{\"pp_p3\": 0.035, \"descuentos\": {\"pack\": -5.0}}'. "
     "Si no hay datos extra, usa la cadena vacía \"\".\n"
     "CRÍTICO — campos pp_p1..pp_p6 (precio de potencia): "
-    "SIEMPRE en €/kW·día. "
-    "Si la factura muestra el precio en €/kW·año, divídelo entre 365 antes de escribirlo. "
-    "Ejemplo: 26,930550 €/kW·año → 26.930550 / 365 = 0.073783 €/kW·día."
+    "SIEMPRE en €/kW·día. Detecta la unidad en que aparece el precio y convierte: "
+    "(a) €/kW·año → divide entre 365. "
+    "Ejemplo: 26,930550 €/kW·año → 26.930550 / 365 = 0.073783 €/kW·día. "
+    "(b) €/kW·mes → divide entre el número de días facturados del período. "
+    "Ejemplo: precio 2,24450 €/kW·mes con 31 días → 2.24450 / 31 = 0.072403 €/kW·día. "
+    "Si la factura no indica la unidad, asume €/kW·año y divide entre 365. "
+    "CASO ESPECIAL — Energía XXI (y otras con sub-períodos): algunas facturas dividen "
+    "un mismo período tarifario en dos sub-períodos con precios distintos y un número "
+    "de días para cada uno. En ese caso calcula la media ponderada por días antes de "
+    "convertir a €/kW·día. "
+    "Ejemplo: sub-período A → 0,044800 €/kW·día × 15 días; "
+    "sub-período B → 0,051200 €/kW·día × 16 días; "
+    "media ponderada = (0.044800×15 + 0.051200×16) / (15+16) = 0.048129 €/kW·día."
 )
 
 
