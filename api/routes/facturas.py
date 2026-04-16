@@ -26,14 +26,17 @@ _EXCLUDE = {"api_ok", "api_error", "fichero_json"}
 
 
 def _build_factura_payload(result: ExtractionResponseAI) -> dict:
-    """Convierte el resultado plano de Claude al formato anidado usado por /enviar."""
-    descuentos = dict(result.descuentos or {})
+    """
+    Constrói o payload de factura com campos planos (retrocompatibilidade com o
+    cotizador) e grupos aninhados (novos consumidores). Ambos coexistem no mesmo dict.
+    """
+    descuentos  = dict(result.descuentos or {})
     if result.bono_social:
         descuentos["bono_social"] = result.bono_social
-
     otros_extra = dict(result.otros or {})
 
     return {
+        # ── Campos de identificação ───────────────────────────────────────────
         "cups":             result.cups,
         "comercializadora": result.comercializadora,
         "distribuidora":    result.distribuidora,
@@ -42,6 +45,26 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
         "periodo_fin":      result.periodo_fin,
         "dias_facturados":  result.dias_facturados,
         "importe_factura":  result.importe_factura,
+
+        # ── Campos planos (retrocompatibilidade com cotizador) ────────────────
+        "pp_p1": result.pp_p1, "pp_p2": result.pp_p2, "pp_p3": result.pp_p3,
+        "pp_p4": result.pp_p4, "pp_p5": result.pp_p5, "pp_p6": result.pp_p6,
+        "pe_p1": result.pe_p1, "pe_p2": result.pe_p2, "pe_p3": result.pe_p3,
+        "pe_p4": result.pe_p4, "pe_p5": result.pe_p5, "pe_p6": result.pe_p6,
+        "pot_p1_kw": result.pot_p1_kw, "pot_p2_kw": result.pot_p2_kw,
+        "pot_p3_kw": result.pot_p3_kw, "pot_p4_kw": result.pot_p4_kw,
+        "pot_p5_kw": result.pot_p5_kw, "pot_p6_kw": result.pot_p6_kw,
+        "consumo_p1_kwh": result.consumo_p1_kwh, "consumo_p2_kwh": result.consumo_p2_kwh,
+        "consumo_p3_kwh": result.consumo_p3_kwh, "consumo_p4_kwh": result.consumo_p4_kwh,
+        "consumo_p5_kwh": result.consumo_p5_kwh, "consumo_p6_kwh": result.consumo_p6_kwh,
+        "imp_ele":         result.imp_ele,
+        "imp_ele_eur_kwh": result.imp_ele_eur_kwh,
+        "iva":             result.iva,
+        "alq_eq_dia":      result.alq_eq_dia,
+        "bono_social":     result.bono_social,
+        "descuentos":      descuentos,
+
+        # ── Grupos aninhados (novos consumidores) ─────────────────────────────
         "potencias_kw": {
             "p1": result.pot_p1_kw, "p2": result.pot_p2_kw,
             "p3": result.pot_p3_kw, "p4": result.pot_p4_kw,
@@ -66,12 +89,11 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
             "iva":             result.iva,
         },
         "otros": {
-            "alq_eq_dia":      result.alq_eq_dia,
+            "alq_eq_dia":       result.alq_eq_dia,
             "cuotaAlquilerMes": None,
-            "descuentos":      descuentos,
+            "descuentos":       descuentos,
             **otros_extra,
         },
-        "archivo": {},
     }
 
 
