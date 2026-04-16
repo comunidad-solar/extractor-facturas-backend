@@ -41,7 +41,7 @@ _PREAMBLE = (
     "      'coste_energia_reactiva': <importe energía reactiva € o null>,\n"
     "      'precio_final_potencia': <total término potencia € o null>,\n"
     "      'total_impuestos_electrico': <importe IEE € o null>,\n"
-    "      'bono_plus_alquiler_equipos_medida': <importe alquiler equipos medida € o null>,\n"
+    "      'alquiler_equipos_medida_importe': <importe alquiler equipos medida € o null>,\n"
     "      'subtotal_sin_impuestos': <base imponible antes de IVA € o null>,\n"
     "      'iva_total': <total IVA € o null>,\n"
     "      'total_factura': <importe total factura € o null>\n"
