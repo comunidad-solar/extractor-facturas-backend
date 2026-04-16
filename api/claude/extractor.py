@@ -121,6 +121,29 @@ def _build_response(data: dict) -> ExtractionResponseAI:
     if "dias_facturados" in filtered and not isinstance(filtered["dias_facturados"], str):
         filtered["dias_facturados"] = str(filtered["dias_facturados"]) if filtered["dias_facturados"] is not None else None
 
+    # Campos que deben ser float pero Claude a veces devuelve dict estructurado
+    _FLOAT_FIELDS = (
+        "bono_social", "alq_eq_dia", "imp_ele", "iva",
+        "importe_factura", "imp_ele_eur_kwh",
+        "imp_termino_energia_eur", "imp_termino_potencia_eur",
+        "imp_impuesto_electrico_eur", "imp_alquiler_eur", "imp_iva_eur",
+        "impuesto_electricidad_importe", "alquiler_equipos_medida_importe",
+        "IVA_TOTAL_EUROS", "margen_de_error",
+    )
+    for field in _FLOAT_FIELDS:
+        val = filtered.get(field)
+        if isinstance(val, dict):
+            # Intentar extraer un valor numérico útil del dict:
+            # buscar 'importe_eur', 'precio_eur_dia', 'valor', o el primer float
+            candidate = (
+                val.get("importe_eur")
+                or val.get("precio_eur_dia")
+                or val.get("valor")
+                or next((v for v in val.values() if isinstance(v, (int, float))), None)
+            )
+            filtered[field] = float(candidate) if candidate is not None else None
+            print(f"  ⚠️  {field} devuelto como dict — extraído: {filtered[field]}")
+
     # Dict → IVABlock
     iva_val = filtered.get("IVA")
     if isinstance(iva_val, dict):
