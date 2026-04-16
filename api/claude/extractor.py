@@ -39,9 +39,13 @@ def _parse_json_from_text(text: str) -> dict:
 
 def _build_response(data: dict) -> ExtractionResponseAI:
     """Filtra claves desconocidas y construye ExtractionResponseAI.
-    Convierte 'otros' y 'descuentos' de string JSON a dict si es necesario."""
+    Convierte 'otros' y 'descuentos' de string JSON a dict si es necesario.
+    Convierte 'IVA' dict → IVABlock."""
+    from api.models import IVABlock
+
     filtered = {k: v for k, v in data.items() if k in _VALID_FIELDS}
 
+    # String JSON → dict para otros y descuentos
     for field in ("otros", "descuentos"):
         val = filtered.get(field)
         if isinstance(val, str):
@@ -50,6 +54,23 @@ def _build_response(data: dict) -> ExtractionResponseAI:
                 filtered[field] = parsed if isinstance(parsed, dict) else None
             except (json.JSONDecodeError, ValueError):
                 filtered[field] = None
+
+    # dias_facturados debe ser string (Claude a veces devuelve int)
+    if "dias_facturados" in filtered and not isinstance(filtered["dias_facturados"], str):
+        filtered["dias_facturados"] = str(filtered["dias_facturados"]) if filtered["dias_facturados"] is not None else None
+
+    # Dict → IVABlock
+    iva_val = filtered.get("IVA")
+    if isinstance(iva_val, dict):
+        try:
+            filtered["IVA"] = IVABlock(**{
+                k: v for k, v in iva_val.items()
+                if k in IVABlock.model_fields
+            })
+        except Exception:
+            filtered["IVA"] = None
+    elif iva_val is not None and not isinstance(iva_val, IVABlock):
+        filtered["IVA"] = None
 
     return ExtractionResponseAI(**filtered)
 
@@ -114,6 +135,11 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
     print(f"  Comercializadora: {result.comercializadora or '(no detectada)'}")
     print(f"  Período: {result.periodo_inicio} → {result.periodo_fin}")
     print(f"  Importe factura: {result.importe_factura} €")
+    if result.margen_de_error is not None:
+        ok = result.margen_de_error <= 5.0
+        icon = "✅" if ok else "⚠️ "
+        print(f"  {icon}  Margen de error: {result.margen_de_error:.2f}%"
+              f"  ({'dentro del 5%' if ok else 'FUERA DEL 5% — revisar campos'})")
     print(f"{'='*70}\n")
 
     return result

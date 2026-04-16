@@ -84,6 +84,17 @@ class ClaudeExtractionInput(BaseModel):
     otros:              str   = ""  # JSON string com pp_p3..p6, pe_p4..p6, descuentos, etc.
 
 
+class IVABlock(BaseModel):
+    """Bloque IVA estructurado — soporta IVA único o fracionado (RDL 8/2023)."""
+    IVA_PERCENT_1:          Optional[int]   = None
+    IVA_PERCENT_2:          Optional[int]   = None
+    IVA_BASE_IMPONIBLE_1:   Optional[float] = None
+    IVA_BASE_IMPONIBLE_2:   Optional[float] = None
+    IVA_SUBTOTAL_EUROS_1:   Optional[float] = None
+    IVA_SUBTOTAL_EUROS_2:   Optional[float] = None
+    IVA_TOTAL_EUROS:        Optional[float] = None
+
+
 class ValidacionCuadre(BaseModel):
     cuadra:             bool
     importe_factura:    Optional[float] = None
@@ -97,20 +108,31 @@ class ExtractionResponseAI(ExtractionResponse):
     y los campos de reconciliación contable (R13)."""
 
     # IEE en €/kWh (formato post RDL 7/2026 — null si viene como porcentaje)
-    imp_ele_eur_kwh:            Optional[float] = None
+    imp_ele_eur_kwh:                Optional[float]    = None
 
     # Importes en € de cada línea de la factura (extraídos por Claude)
-    imp_termino_energia_eur:    Optional[float] = None
-    imp_termino_potencia_eur:   Optional[float] = None
-    imp_impuesto_electrico_eur: Optional[float] = None
-    imp_alquiler_eur:           Optional[float] = None
-    imp_iva_eur:                Optional[float] = None
+    imp_termino_energia_eur:        Optional[float]    = None
+    imp_termino_potencia_eur:       Optional[float]    = None
+    imp_impuesto_electrico_eur:     Optional[float]    = None
+    imp_alquiler_eur:               Optional[float]    = None
+    imp_iva_eur:                    Optional[float]    = None
 
-    # Conceptos no estándar (Pack Iberdrola, Asistencia PYMES, etc.)
-    otros:              Optional[dict]              = None
+    # Nuevos campos raíz de importes totales
+    impuesto_electricidad_importe:  Optional[float]    = None
+    alquiler_equipos_medida_importe: Optional[float]   = None
+    IVA_TOTAL_EUROS:                Optional[float]    = None
+
+    # Bloque IVA estructurado (IVA único o fracionado)
+    IVA:                            Optional[IVABlock] = None
+
+    # Conceptos no estándar con estructura costes/creditos/observacion
+    otros:                          Optional[dict]     = None
+
+    # Reconciliación contable: % de desviación entre suma conceptos e importe
+    margen_de_error:                Optional[float]    = None
 
     # Reconciliación contable R13 (calculada en el servidor)
-    validacion_cuadre:  Optional[ValidacionCuadre]  = None
+    validacion_cuadre:              Optional[ValidacionCuadre] = None
 
     # ID de sesión creada en /sesion tras la extracción
-    session_id:         Optional[str]               = None
+    session_id:                     Optional[str]      = None

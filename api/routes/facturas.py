@@ -22,18 +22,34 @@ router = APIRouter(prefix="/facturas", tags=["facturas"])
 RESULTADOS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "resultados")
 os.makedirs(RESULTADOS_DIR, exist_ok=True)
 
-_EXCLUDE = {"api_ok", "api_error", "fichero_json"}
+_EXCLUDE = {"api_ok", "api_error", "fichero_json", "descuentos"}
 
 
 def _build_factura_payload(result: ExtractionResponseAI) -> dict:
     """
     Constrói o payload de factura com campos planos (retrocompatibilidade com o
     cotizador) e grupos aninhados (novos consumidores). Ambos coexistem no mesmo dict.
+
+    Mudanças v2:
+    - 'descuentos' removido do nível raiz e do grupo 'otros'
+    - 'otros' reestruturado com costes/creditos/observacion
+    - Novos campos raíz: impuesto_electricidad_importe, alquiler_equipos_medida_importe,
+      IVA_TOTAL_EUROS, IVA (bloco estruturado)
+    - Migração backward-compat: se otros.creditos vazio, lê de result.descuentos
     """
-    descuentos  = dict(result.descuentos or {})
-    if result.bono_social:
-        descuentos["bono_social"] = result.bono_social
-    otros_extra = dict(result.otros or {})
+    # ── Ler estructura nueva de otros ────────────────────────────────────────
+    otros_raw   = result.otros or {}
+    costes      = dict(otros_raw.get("costes") or {})
+    creditos    = dict(otros_raw.get("creditos") or {})
+    observacion = list(otros_raw.get("observacion") or [])
+
+    # Migración backward-compat: si Claude aún llena 'descuentos' en lugar de
+    # 'otros.creditos', migrar los valores
+    if not creditos and result.descuentos:
+        creditos = {k: v for k, v in result.descuentos.items()}
+
+    # IVA bloque
+    iva_block = result.IVA.model_dump() if result.IVA else None
 
     return {
         # ── Campos de identificação ───────────────────────────────────────────
@@ -47,6 +63,7 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
         "importe_factura":  result.importe_factura,
 
         # ── Campos planos (retrocompatibilidade com cotizador) ────────────────
+        # NOTA: 'descuentos' removido — migrado para otros.creditos
         "pp_p1": result.pp_p1, "pp_p2": result.pp_p2, "pp_p3": result.pp_p3,
         "pp_p4": result.pp_p4, "pp_p5": result.pp_p5, "pp_p6": result.pp_p6,
         "pe_p1": result.pe_p1, "pe_p2": result.pe_p2, "pe_p3": result.pe_p3,
@@ -62,7 +79,12 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
         "iva":             result.iva,
         "alq_eq_dia":      result.alq_eq_dia,
         "bono_social":     result.bono_social,
-        "descuentos":      descuentos,
+
+        # ── Novos campos raíz de importes totais ──────────────────────────────
+        "impuesto_electricidad_importe":  result.impuesto_electricidad_importe,
+        "alquiler_equipos_medida_importe": result.alquiler_equipos_medida_importe,
+        "IVA_TOTAL_EUROS":                result.IVA_TOTAL_EUROS,
+        "IVA":                            iva_block,
 
         # ── Grupos aninhados (novos consumidores) ─────────────────────────────
         "potencias_kw": {
@@ -87,14 +109,213 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
             "imp_ele":         result.imp_ele,
             "imp_ele_eur_kwh": result.imp_ele_eur_kwh,
             "iva":             result.iva,
+            "IVA":             iva_block,
         },
         "otros": {
-            "alq_eq_dia":       result.alq_eq_dia,
+            "alq_eq_dia":       result.alq_eq_dia,   # mantido para retrocompat
             "cuotaAlquilerMes": None,
-            "descuentos":       descuentos,
-            **otros_extra,
+            "costes":           costes,
+            "creditos":         creditos,
+            "observacion":      observacion,
         },
+
+        # ── Validação de cuadre ───────────────────────────────────────────────
+        "margen_de_error": result.margen_de_error,
     }
+
+
+def _log_cuadre(result: ExtractionResponseAI) -> None:
+    """Imprime en terminal el desglose completo del cuadre contable línea a línea."""
+    W       = 68
+    importe = result.importe_factura or 0.0
+    dias    = int(result.dias_facturados or 0)
+
+    def row(label: str, formula: str, valor: float, estimado: bool = False) -> None:
+        flag = " (*)" if estimado else "    "
+        print(f"  │{flag} {label:<28} {formula:<24} {valor:>+10.2f} €  │")
+
+    def sep(char: str = "─") -> None:
+        print(f"  ├{'─' if char == '─' else char*1}{'─'*(W-2)}┤")
+
+    print(f"\n  ┌{'─'*W}┐")
+    print(f"  │{'  CUADRE CONTABLE — DESGLOSE COMPLETO':^{W}}│")
+
+    # ════════════════════════════════════════════════════════
+    # BLOQUE POTENCIA
+    # ════════════════════════════════════════════════════════
+    sep()
+    print(f"  │  {'POTENCIA':<{W-4}}│")
+    sep()
+    pot_total   = 0.0
+    pot_claude  = result.imp_termino_potencia_eur or 0.0
+    periodos_pp = [
+        ("P1", result.pp_p1, result.pot_p1_kw),
+        ("P2", result.pp_p2, result.pot_p2_kw),
+        ("P3", result.pp_p3, result.pot_p3_kw),
+        ("P4", result.pp_p4, result.pot_p4_kw),
+        ("P5", result.pp_p5, result.pot_p5_kw),
+        ("P6", result.pp_p6, result.pot_p6_kw),
+    ]
+    for pn, pp, kw in periodos_pp:
+        if pp and kw and dias:
+            val  = pp * kw * dias
+            pot_total += val
+            fml  = f"{kw} kW × {dias}d × {pp:.6f}"
+            row(f"  Potencia {pn}", fml, val)
+    if pot_claude:
+        diff_pot = pot_claude - pot_total
+        row("  SUBTOTAL potencia (Claude)", "campo imp_termino_potencia_eur", pot_claude)
+        if abs(diff_pot) > 0.02:
+            row("  ↳ vs. cálculo propio", f"diff = {diff_pot:+.2f} €", diff_pot, estimado=True)
+        pot_total = pot_claude
+    else:
+        row("  SUBTOTAL potencia (*calc)", "Σ pN × kW × días", pot_total, estimado=True)
+
+    # ════════════════════════════════════════════════════════
+    # BLOQUE ENERGÍA
+    # ════════════════════════════════════════════════════════
+    sep()
+    print(f"  │  {'ENERGÍA':<{W-4}}│")
+    sep()
+    ene_total  = 0.0
+    ene_claude = result.imp_termino_energia_eur or 0.0
+    periodos_pe = [
+        ("P1", result.pe_p1, result.consumo_p1_kwh),
+        ("P2", result.pe_p2, result.consumo_p2_kwh),
+        ("P3", result.pe_p3, result.consumo_p3_kwh),
+        ("P4", result.pe_p4, result.consumo_p4_kwh),
+        ("P5", result.pe_p5, result.consumo_p5_kwh),
+        ("P6", result.pe_p6, result.consumo_p6_kwh),
+    ]
+    for pn, pe, kwh in periodos_pe:
+        if pe and kwh:
+            val  = pe * kwh
+            ene_total += val
+            fml  = f"{kwh} kWh × {pe:.6f}"
+            row(f"  Energía {pn}", fml, val)
+    if ene_claude:
+        diff_ene = ene_claude - ene_total
+        row("  SUBTOTAL energía (Claude)", "campo imp_termino_energia_eur", ene_claude)
+        if abs(diff_ene) > 0.02:
+            row("  ↳ vs. cálculo propio", f"diff = {diff_ene:+.2f} €", diff_ene, estimado=True)
+        ene_total = ene_claude
+    else:
+        row("  SUBTOTAL energía (*calc)", "Σ pN × kWh", ene_total, estimado=True)
+
+    # ════════════════════════════════════════════════════════
+    # BLOQUE IMPUESTOS Y SERVICIOS
+    # ════════════════════════════════════════════════════════
+    sep()
+    print(f"  │  {'IMPUESTOS Y SERVICIOS':<{W-4}}│")
+    sep()
+
+    iee_eur      = result.imp_impuesto_electrico_eur or 0.0
+    alquiler_eur = result.imp_alquiler_eur           or 0.0
+    iva_eur      = result.imp_iva_eur                or 0.0
+    bono         = result.bono_social                or 0.0
+
+    # IEE — mostrar también cálculo desde %
+    if result.imp_ele and not iee_eur:
+        iee_base = pot_total + ene_total
+        iee_eur  = iee_base * result.imp_ele / 100
+        row("  IEE (*calc)", f"{result.imp_ele}% × base", iee_eur, estimado=True)
+    elif iee_eur:
+        fml_iee = f"campo imp_impuesto_electrico_eur"
+        if result.imp_ele:
+            fml_iee = f"{result.imp_ele}% → {iee_eur:.2f}"
+        row("  Impuesto eléctrico", fml_iee, iee_eur)
+
+    # Alquiler — mostrar €/día × días
+    if not alquiler_eur and result.alq_eq_dia and dias:
+        alquiler_eur = result.alq_eq_dia * dias
+        row("  Alquiler (*calc)", f"{result.alq_eq_dia} €/día × {dias}d", alquiler_eur, estimado=True)
+    elif alquiler_eur:
+        fml_alq = f"campo imp_alquiler_eur"
+        if result.alq_eq_dia and dias:
+            fml_alq = f"{result.alq_eq_dia} €/día × {dias}d"
+        row("  Alquiler contador", fml_alq, alquiler_eur)
+
+    if bono:
+        row("  Bono social", "campo bono_social", -bono)
+
+    # Créditos/descuentos línea a línea (de otros.creditos)
+    otros_raw_log   = result.otros or {}
+    costes_dict     = otros_raw_log.get("costes") or {}
+    creditos_dict   = otros_raw_log.get("creditos") or {}
+    # Migración backward-compat: si creditos vacío, leer de result.descuentos
+    if not creditos_dict and result.descuentos:
+        creditos_dict = {k: v for k, v in result.descuentos.items()
+                         if isinstance(v, (int, float))}
+    desc_sum = 0.0
+    for nombre, val in creditos_dict.items():
+        if isinstance(val, (int, float)) and val is not None:
+            desc_sum += val
+            row(f"  Cred: {nombre[:23]}", "otros.creditos", val)
+
+    # IVA — mostrar % × base si disponible
+    if not iva_eur and result.iva:
+        iva_base = pot_total + ene_total + iee_eur + alquiler_eur - bono + desc_sum
+        iva_eur  = iva_base * result.iva / 100
+        row("  IVA (*calc)", f"{result.iva}% × base", iva_eur, estimado=True)
+    elif iva_eur:
+        fml_iva = f"campo imp_iva_eur"
+        if result.iva:
+            fml_iva = f"{result.iva}% → {iva_eur:.2f}"
+        row("  IVA", fml_iva, iva_eur)
+
+    # ════════════════════════════════════════════════════════
+    # BLOQUE OTROS
+    # ════════════════════════════════════════════════════════
+    _skip_costes = {"alquiler_equipos_medida_importe", "bono_social_importe"}
+    otros_sum = sum(
+        v for k, v in costes_dict.items()
+        if isinstance(v, (int, float)) and v is not None
+        and k not in _skip_costes
+    )
+    if costes_dict or creditos_dict:
+        sep()
+        print(f"  │  {'OTROS CONCEPTOS':<{W-4}}│")
+        sep()
+        for nombre, val in costes_dict.items():
+            if isinstance(val, (int, float)) and val is not None:
+                row(f"  costes.{nombre[:26]}", "otros.costes", val)
+        for nombre, val in creditos_dict.items():
+            if isinstance(val, (int, float)) and val is not None:
+                row(f"  creditos.{nombre[:24]}", "otros.creditos", val)
+
+    # ════════════════════════════════════════════════════════
+    # TOTALES
+    # ════════════════════════════════════════════════════════
+    sep()
+    suma = pot_total + ene_total + iee_eur + alquiler_eur + iva_eur - bono + desc_sum + otros_sum
+    diff = abs(suma - importe)
+    pct  = (diff / importe * 100) if importe else 0.0
+    ok   = pct <= 5.0
+
+    print(f"  │  {'SUMA CONCEPTOS':<28} {'':24} {suma:>+10.2f} €  │")
+    print(f"  │  {'IMPORTE FACTURA (PDF)':<28} {'':24} {importe:>+10.2f} €  │")
+    print(f"  │  {'Diferencia':<28} {'':24} {diff:>+10.2f} €  │")
+    sep()
+    s_icon = "✅" if ok else "⚠️ "
+    print(f"  │  {s_icon}  {'Margen error servidor':<{W-14}} {pct:>+8.2f} %  │")
+    if result.margen_de_error is not None:
+        c_icon = "✅" if result.margen_de_error <= 5.0 else "⚠️ "
+        print(f"  │  {c_icon}  {'Margen error Claude':<{W-14}} {result.margen_de_error:>+8.2f} %  │")
+
+    # Advertencia si hay campos EUR ausentes
+    missing = [f for f, v in [
+        ("imp_termino_potencia_eur",   result.imp_termino_potencia_eur),
+        ("imp_termino_energia_eur",    result.imp_termino_energia_eur),
+        ("imp_impuesto_electrico_eur", result.imp_impuesto_electrico_eur),
+        ("imp_alquiler_eur",           result.imp_alquiler_eur),
+        ("imp_iva_eur",                result.imp_iva_eur),
+    ] if not v]
+    if missing:
+        sep()
+        print(f"  │  ⚠️  Campos EUR no rellenados por Claude (valores con (*) son estimados):{'':>{W-74}}│")
+        for m in missing:
+            print(f"  │     · {m:<{W-7}}│")
+    print(f"  └{'─'*W}┘")
 
 
 @router.post("/extraer", response_model=ExtractionResponseAI,
@@ -139,6 +360,8 @@ async def extraer_factura(
         print(f"  [ERROR]  Error inesperado: {msg}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
+
+    _log_cuadre(result)
 
     # Buscar dealId y mpklogId en Zoho CRM si hay correo
     deal_id, mpklog_id = None, None
