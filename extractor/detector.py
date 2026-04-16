@@ -1,6 +1,6 @@
 # extractor/detector.py
 # Identifica la comercializadora de una factura a partir del texto extraído del PDF.
-# Devuelve un string normalizado que se usa para seleccionar el parser adecuado.
+# Devadauelve un string normalizado que se usa para seleccionar el parser adecuado.
 #
 # Modificado: 2026-02-27 | Rodrigo Costa
 #   - Añadido patrón para Cox Energía
