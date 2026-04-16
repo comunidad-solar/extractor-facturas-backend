@@ -2,6 +2,82 @@
 
 ---
 
+## 2026-04-16
+
+### [027] `api/claude/prompts.py` — _PREAMBLE substituído por versão completa
+**Prompt:** Reestruturar prompt com instrucções de `otros.costes/creditos/observacion`, bloco `IVA`, precisão numérica, zeros vs null, regras por comercializadora.
+
+**Ficheiro:** `api/claude/prompts.py`
+
+**Mudança:**
+- `_PREAMBLE` substituído integralmente com 6 novas secções:
+  - **Precisão numérica** — nunca arredondar decimais; preservar exatamente como na factura
+  - **Zeros vs null** — null para períodos inexistentes na tarifa; 0.0 só se existem mas tiveram zero
+  - **Estrutura `otros`** — dict obrigatório `{costes, creditos, observacion}`; `costes` positivos, `creditos` negativos
+  - **Bloco `IVA`** — `IVA_PERCENT_1/2`, `IVA_BASE_IMPONIBLE_1/2`, `IVA_SUBTOTAL_EUROS_1/2`, `IVA_TOTAL_EUROS`; também no raíz
+  - **Campos obrigatórios** — `imp_termino_*`, `impuesto_electricidad_importe`, `alquiler_equipos_medida_importe`
+  - **Validação** — fórmula com `imp_termino_*` + `otros.costes/creditos`; auto-correção se >5%
+  - **Conversão `pp_p*`** — €/kW·ano ÷365, €/kW·mes ÷dias_facturados; sub-períodos = média ponderada
+  - **Regras por comercializadora** — Octopus, Iberdrola 3.0TD, Iberdrola autoconsumo, Iberdrola IVA fracionado, Cox Energy, 2.0TD P1/P3
+
+---
+
+### [026] `api/routes/facturas.py` — `_log_cuadre` atualizado para `otros.costes/creditos`
+**Prompt:** Atualizar log do cuadre para ler de `otros.costes/creditos` em vez de `result.descuentos` e `result.otros` flat.
+
+**Ficheiro:** `api/routes/facturas.py`
+
+**Mudança:**
+- Substituído bloco "Descuentos línea a línea" → lê de `creditos_dict = result.otros.get("creditos")`; backward-compat com `result.descuentos` se creditos vazio
+- Substituído bloco "BLOQUE OTROS" → itera `costes_dict` e `creditos_dict` separadamente; exclui `alquiler_equipos_medida_importe` e `bono_social_importe` de `otros_sum` (já contados)
+- Labels: `costes.{nome}` / `creditos.{nome}` em vez de `otros[...]`
+
+---
+
+### [025] `api/routes/facturas.py` — `_build_factura_payload` reestruturado v2
+**Prompt:** Reestruturar payload de factura: `otros.costes/creditos/observacion`, remover `descuentos` do raíz, adicionar novos campos raíz.
+
+**Ficheiro:** `api/routes/facturas.py`
+
+**Mudança:**
+- `_EXCLUDE` adicionado `"descuentos"` → excluído do response da API
+- `_build_factura_payload` substituído:
+  - Remove `descuentos` do nível raíz e do grupo `otros`
+  - `otros` reestruturado: `{alq_eq_dia, cuotaAlquilerMes, costes, creditos, observacion}`
+  - Novos campos raíz: `impuesto_electricidad_importe`, `alquiler_equipos_medida_importe`, `IVA_TOTAL_EUROS`, `IVA` (dict do bloco)
+  - `impuestos` grupo inclui agora `IVA` (bloco)
+  - Backward-compat: se `creditos` vazio e `result.descuentos` tem valores, migra-os
+
+---
+
+### [024] `api/claude/extractor.py` — `_build_response` com conversão `IVA` dict → `IVABlock`
+**Prompt:** Atualizar `_build_response` para converter dict `IVA` retornado pelo Claude em instância `IVABlock`.
+
+**Ficheiro:** `api/claude/extractor.py`
+
+**Mudança:**
+- `_build_response` atualizado:
+  - Mantém conversão string JSON → dict para `otros` e `descuentos`
+  - Adiciona: se `filtered["IVA"]` é dict → `IVABlock(**{k: v for k, v in iva_val.items() if k in IVABlock.model_fields})`; em exceção → None
+  - Se `IVA` não é None nem IVABlock → None
+
+---
+
+### [023] `api/models.py` — `IVABlock` + novos campos em `ExtractionResponseAI`
+**Prompt:** Adicionar `IVABlock` e novos campos raíz ao modelo Pydantic.
+
+**Ficheiro:** `api/models.py`
+
+**Mudança:**
+- Nova classe `IVABlock` com: `IVA_PERCENT_1/2`, `IVA_BASE_IMPONIBLE_1/2`, `IVA_SUBTOTAL_EUROS_1/2`, `IVA_TOTAL_EUROS`
+- `ExtractionResponseAI` adicionados:
+  - `impuesto_electricidad_importe: Optional[float]`
+  - `alquiler_equipos_medida_importe: Optional[float]`
+  - `IVA_TOTAL_EUROS: Optional[float]`
+  - `IVA: Optional[IVABlock]`
+
+---
+
 ## 2026-04-15
 
 ---
