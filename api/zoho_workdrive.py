@@ -149,21 +149,21 @@ async def upload_factura_files(
             pdf_bytes,
         ),
         (
-            f"claude_{nomedopdf}.json",
+            f"{nomedopdf}_claudeDatosBrutos.json",
             json.dumps(
                 result.model_dump(exclude=_EXCLUDE_FIELDS),
                 ensure_ascii=False, indent=2,
             ).encode("utf-8"),
         ),
         (
-            f"{nomedopdf}_processed.json",
+            f"{nomedopdf}_claudeDatosTratados.json",
             json.dumps(
                 session_payload.get("factura", {}),
                 ensure_ascii=False, indent=2,
             ).encode("utf-8"),
         ),
         (
-            f"remoto_{nomedopdf}.json",
+            f"{nomedopdf}_datosEnviadosalCotizador.json",
             json.dumps(session_payload, ensure_ascii=False, indent=2).encode("utf-8"),
         ),
     ]
