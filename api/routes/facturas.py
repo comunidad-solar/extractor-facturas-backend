@@ -66,6 +66,7 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
         # NOTA: 'descuentos' removido — migrado para otros.creditos
         "pp_p1": result.pp_p1, "pp_p2": result.pp_p2, "pp_p3": result.pp_p3,
         "pp_p4": result.pp_p4, "pp_p5": result.pp_p5, "pp_p6": result.pp_p6,
+        "pp_unidad": result.pp_unidad,
         "pe_p1": result.pe_p1, "pe_p2": result.pe_p2, "pe_p3": result.pe_p3,
         "pe_p4": result.pe_p4, "pe_p5": result.pe_p5, "pe_p6": result.pe_p6,
         "pot_p1_kw": result.pot_p1_kw, "pot_p2_kw": result.pot_p2_kw,
@@ -100,6 +101,7 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
         "precios_potencia": {
             "p1": result.pp_p1, "p2": result.pp_p2, "p3": result.pp_p3,
             "p4": result.pp_p4, "p5": result.pp_p5, "p6": result.pp_p6,
+            "pp_unidad": result.pp_unidad,
         },
         "precios_energia": {
             "pe_p1": result.pe_p1, "pe_p2": result.pe_p2, "pe_p3": result.pe_p3,
@@ -112,6 +114,7 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
             "IVA":             iva_block,
         },
         "otros": {
+            "importes_totalizados": otros_raw.get("importes_totalizados"),
             "alq_eq_dia":       result.alq_eq_dia,   # mantido para retrocompat
             "cuotaAlquilerMes": None,
             "costes":           costes,
