@@ -67,9 +67,10 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
         if v is not None:
             importes_totalizados.setdefault(k, v)
 
-    # Campos de otros.costes com "importe" no nome
+    # Só os costes estruturais vão para importes_totalizados (não serviços dinâmicos)
+    _COSTES_ESTRUTURAIS = {"alquiler_equipos_medida_importe", "exceso_potencia_importe", "coste_energia_reactiva"}
     for k, v in costes.items():
-        if "importe" in k and v is not None:
+        if k in _COSTES_ESTRUTURAIS and v is not None:
             importes_totalizados.setdefault(k, v)
 
     # Campos de otros.creditos com "importe" no nome
