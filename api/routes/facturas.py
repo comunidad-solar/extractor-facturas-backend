@@ -408,6 +408,19 @@ async def extraer_factura(
 
     # _log_cuadre(result)
 
+    # Advertencia si la factura es anterior a 2025
+    _ano_factura = None
+    _fecha_ref = result.periodo_fin or result.periodo_inicio
+    if _fecha_ref:
+        try:
+            partes = _fecha_ref.replace("-", "/").split("/")
+            _ano_factura = int(partes[2]) if len(partes[0]) <= 2 else int(partes[0])
+        except (ValueError, IndexError):
+            pass
+    result.advertencia_ano = bool(_ano_factura and _ano_factura < 2025)
+    if result.advertencia_ano:
+        print(f"  ⚠️  Factura do ano {_ano_factura} — advertencia_ano: true")
+
     # Buscar dealId y mpklogId en Zoho CRM si hay correo
     deal_id, mpklog_id = None, None
     if correo:
