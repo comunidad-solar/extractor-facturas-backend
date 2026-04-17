@@ -1,7 +1,163 @@
 # Guia de Campos do Payload
 
-> Explica, de forma simples, o que é cada campo, de onde vem e o que significa.
 > Baseado num exemplo real: fatura 3.0TD, Quantium Lux, 30 dias, €1895.42.
+
+Payload:
+
+{
+	"cliente": {
+		"nombre": "Flow",
+		"apellidos": "Test",
+		"correo": "Test@gmail.com",
+		"telefono": "654789123",
+		"direccion": "Robregordo, Comunidade de Madrid, Espanha",
+		"lat": 41.1064517,
+		"lon": -3.5937466,
+		"dealId": "230641000182098126",
+		"mpklogId": "230641000182326253",
+		"databaseId": "",
+		"dni": "",
+		"tipoVenta": "Alquiler"
+	},
+	"factura": {
+		"cups": "ES0021000010960268KY0F",
+		"comercializadora": "QUANTIUM LUX 6.4, SL",
+		"distribuidora": "IBERDROLA DISTRIBUCIÓN ELÉCTRICA, S.A.U",
+		"tarifa_acceso": "3.0TD",
+		"periodo_inicio": "31/10/2025",
+		"periodo_fin": "30/11/2025",
+		"dias_facturados": "30",
+		"importe_factura": 1895.42,
+		"pp_p1": 0.00014756,
+		"pp_p2": 7.696e-05,
+		"pp_p3": 3.2e-05,
+		"pp_p4": 2.763e-05,
+		"pp_p5": 1.749e-05,
+		"pp_p6": 1.018e-05,
+		"pe_p1": 0.0,
+		"pe_p2": 0.163966,
+		"pe_p3": 0.143213,
+		"pe_p4": 0.0,
+		"pe_p5": 0.0,
+		"pe_p6": 0.125853,
+		"pot_p1_kw": 22.0,
+		"pot_p2_kw": 27.7,
+		"pot_p3_kw": 27.7,
+		"pot_p4_kw": 27.7,
+		"pot_p5_kw": 27.7,
+		"pot_p6_kw": 27.7,
+		"consumo_p1_kwh": 0.0,
+		"consumo_p2_kwh": 3879.0,
+		"consumo_p3_kwh": 2444.0,
+		"consumo_p4_kwh": 0.0,
+		"consumo_p5_kwh": 0.0,
+		"consumo_p6_kwh": 1903.0,
+		"imp_ele": 5.11269,
+		"imp_ele_eur_kwh": null,
+		"iva": 21,
+		"alq_eq_dia": 0.198,
+		"bono_social": null,
+		"impuesto_electricidad_importe": 75.9,
+		"alquiler_equipos_medida_importe": 5.94,
+		"IVA_TOTAL_EUROS": 328.96,
+		"IVA": {
+			"IVA_PERCENT_1": 21,
+			"IVA_PERCENT_2": null,
+			"IVA_BASE_IMPONIBLE_1": 1566.46,
+			"IVA_BASE_IMPONIBLE_2": null,
+			"IVA_SUBTOTAL_EUROS_1": 328.96,
+			"IVA_SUBTOTAL_EUROS_2": null,
+			"IVA_TOTAL_EUROS": 328.96
+		},
+		"potencias_kw": {
+			"p1": 22.0,
+			"p2": 27.7,
+			"p3": 27.7,
+			"p4": 27.7,
+			"p5": 27.7,
+			"p6": 27.7
+		},
+		"consumos_kwh": {
+			"p1": 0.0,
+			"p2": 3879.0,
+			"p3": 2444.0,
+			"p4": 0.0,
+			"p5": 0.0,
+			"p6": 1903.0
+		},
+		"precios_potencia": {
+			"p1": 0.00014756,
+			"p2": 7.696e-05,
+			"p3": 3.2e-05,
+			"p4": 2.763e-05,
+			"p5": 1.749e-05,
+			"p6": 1.018e-05
+		},
+		"precios_energia": {
+			"pe_p1": 0.0,
+			"pe_p2": 0.163966,
+			"pe_p3": 0.143213,
+			"pe_p4": 0.0,
+			"pe_p5": 0.0,
+			"pe_p6": 0.125853
+		},
+		"impuestos": {
+			"imp_ele": 5.11269,
+			"imp_ele_eur_kwh": null,
+			"iva": 21,
+			"IVA": {
+				"IVA_PERCENT_1": 21,
+				"IVA_PERCENT_2": null,
+				"IVA_BASE_IMPONIBLE_1": 1566.46,
+				"IVA_BASE_IMPONIBLE_2": null,
+				"IVA_SUBTOTAL_EUROS_1": 328.96,
+				"IVA_SUBTOTAL_EUROS_2": null,
+				"IVA_TOTAL_EUROS": 328.96
+			}
+		},
+		"otros": {
+			"alq_eq_dia": 0.198,
+			"cuotaAlquilerMes": null,
+			"costes": {
+				"bono_social_importe": null,
+				"exceso_potencia_importe": 118.65,
+				"alquiler_equipos_medida_importe": 5.94,
+				"coste_energia_reactiva": 55.08
+			},
+			"creditos": {
+				"compensacion_excedentes_kwh": null,
+				"compensacion_excedentes_importe": null
+			},
+			"observacion": [
+				"pp_p1 convertido de €/kW/año a €/kW/día dividiendo por 365: 0,053859/365=0,00014756",
+				"pp_p2 convertido de €/kW/año a €/kW/día dividiendo por 365: 0,028087/365=0,00007696",
+				"pp_p3 convertido de €/kW/año a €/kW/día dividiendo por 365: 0,011678/365=0,00003200",
+				"pp_p4 convertido de €/kW/año a €/kW/día dividiendo por 365: 0,010086/365=0,00002763",
+				"pp_p5 convertido de €/kW/año a €/kW/día dividiendo por 365: 0,006379/365=0,00001749",
+				"pp_p6 convertido de €/kW/año a €/kW/día dividiendo por 365: 0,003716/365=0,00001018",
+				"Tarifa 3.0TD con 6 periodos P1-P6",
+				"Coste Exceso Potencia incluido: 118,65 €",
+				"Coste Energía Reactiva incluido: 55,08 €",
+				"energia_facturada_kwh calculada como suma de consumos por periodo: P2(3879)+P3(2444)+P6(1903)=10226 kWh",
+				"pe_p1=0 y pe_p4=pe_p5=0 porque consumo es 0 kWh en esos periodos",
+				"alq_eq_dia calculado como 5,94/30=0,198 €/día"
+			]
+		},
+		"margen_de_error": 9.16
+	},
+	"Fsmstate": "01_DENTRO_ZONA",
+	"FsmPrevious": null,
+	"ce": {
+		"nombre": "Ayuntamiento Robregordo",
+		"direccion": "",
+		"status": "Waiting list",
+		"etiqueta": "",
+		"id_generacion": "230641000154599216"
+	},
+	"session_id": "29adb900-ba1d-4feb-ad86-3f6e1e54ed0d",
+	"dealId": "230641000182098126",
+	"mpklogId": "230641000182326253"
+}
 
 ---
 

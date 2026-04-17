@@ -282,26 +282,43 @@ def _log_cuadre(result: ExtractionResponseAI) -> None:
     if not creditos_dict and result.descuentos:
         creditos_dict = {k: v for k, v in result.descuentos.items()
                          if isinstance(v, (int, float))}
+    # ── Créditos monetarios (excluir campos kWh) ─────────────────────────
+    creditos_monetarios = {
+        k: v for k, v in creditos_dict.items()
+        if "kwh" not in k.lower() and isinstance(v, (int, float)) and v is not None
+    }
+    creditos_sum = sum(creditos_monetarios.values())
+
+    # ── Heurística: ¿los créditos ya están en imp_termino_*? ─────────────
+    # Si la suma base ≈ importe_factura (≤3% error) → créditos ya incluidos.
+    # Si la suma base >> importe_factura → créditos son conceptos separados → sumar.
+    suma_base = pot_total + ene_total + iee_eur + alquiler_eur + iva_eur
+    error_base_pct = abs(suma_base - importe) / importe * 100 if importe else 0.0
+    creditos_ya_incluidos = error_base_pct <= 3.0
+
     if costes_dict or creditos_dict:
         sep()
-        print(f"  │  {'OTROS CONCEPTOS (info — ya incluido en imp_termino_*)':<{W-4}}│")
+        nota = "info (en imp_*)" if creditos_ya_incluidos else "sumado al cuadre"
+        print(f"  │  {'OTROS CONCEPTOS':<{W-4}}│")
         sep()
         for nombre, val in costes_dict.items():
             if isinstance(val, (int, float)) and val is not None:
-                row(f"  costes.{nombre[:26]}", "info", val)
+                row(f"  costes.{nombre[:26]}", "info (en imp_*)", val)
         for nombre, val in creditos_dict.items():
             if "kwh" in nombre.lower():
-                # Bug 1: campo kWh — no es monetario, no entra en cuadre
-                print(f"  │     [kWh — excluido del cuadre] {nombre}: {val} kWh{'':<{W-45}}│")
+                kwh_label = f"[kWh excluido] {nombre}: {val} kWh"
+                print(f"  │     {kwh_label:<{W-6}}│")
                 continue
             if isinstance(val, (int, float)) and val is not None:
-                row(f"  creditos.{nombre[:24]}", "info", val)
+                row(f"  creditos.{nombre[:24]}", nota, val)
 
     # ════════════════════════════════════════════════════════
-    # TOTALES — solo imp_termino_* (Bug 2: otros no se suma)
+    # TOTALES
+    # Si créditos ya están en imp_termino_* → no sumar (evita doble contabilidad).
+    # Si créditos son conceptos separados → sumar (son descuentos fuera de imp_*).
     # ════════════════════════════════════════════════════════
     sep()
-    suma = pot_total + ene_total + iee_eur + alquiler_eur + iva_eur
+    suma = suma_base if creditos_ya_incluidos else suma_base + creditos_sum
     diff = abs(suma - importe)
     pct  = (diff / importe * 100) if importe else 0.0
     ok   = pct <= 5.0
@@ -326,7 +343,7 @@ def _log_cuadre(result: ExtractionResponseAI) -> None:
     ] if not v]
     if missing:
         sep()
-        print(f"  │  ⚠️  Campos EUR no rellenados por Claude (valores con (*) son estimados):{'':>{W-74}}│")
+        print(f"  │  {'⚠️  Campos EUR no rellenados por Claude — valores (*) son estimados':<{W-4}}│")
         for m in missing:
             print(f"  │     · {m:<{W-7}}│")
     print(f"  └{'─'*W}┘")
