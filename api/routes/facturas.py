@@ -443,6 +443,7 @@ async def extraer_factura(
             pdf_bytes       = pdf_bytes,
             result          = result,
             session_payload = session_payload,
+            session_id      = result.session_id,
         )
     )
 
