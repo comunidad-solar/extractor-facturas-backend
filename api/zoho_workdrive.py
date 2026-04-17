@@ -13,6 +13,7 @@ from typing import Literal
 import httpx
 
 from api.models import ExtractionResponseAI
+from api.routes.sesion import actualizar_sesion
 
 _WD_BASE   = "https://www.zohoapis.eu/workdrive/api/v1"
 _WD_UPLOAD = "https://www.zohoapis.eu/workdrive/api/v1/upload"
@@ -133,6 +134,7 @@ async def upload_factura_files(
     pdf_bytes:       bytes,
     result:          ExtractionResponseAI,
     session_payload: dict,
+    session_id:      str | None = None,
 ) -> None:
     """
     Cria subpasta {nomedopdf}_{tarifa_acceso} dentro de ZOHO_WORKDRIVE_FOLDER_ID
@@ -190,6 +192,11 @@ async def upload_factura_files(
                 return
 
             print(f"  ✅  WorkDrive pasta criada: {subfolder_name} ({subfolder_id})")
+
+            # Injetar workdrive_id na sessão
+            if session_id:
+                actualizar_sesion(session_id, {**session_payload, "workdrive_id": subfolder_id})
+                print(f"  ✅  Sessão {session_id} actualizada com workdrive_id: {subfolder_id}")
 
             # Upload de cada ficheiro
             ok_count = 0
