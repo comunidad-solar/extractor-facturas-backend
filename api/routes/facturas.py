@@ -392,7 +392,7 @@ async def extraer_factura(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
 
-    _log_cuadre(result)
+    # _log_cuadre(result)
 
     # Buscar dealId y mpklogId en Zoho CRM si hay correo
     deal_id, mpklog_id = None, None
