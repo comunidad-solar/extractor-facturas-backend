@@ -51,6 +51,9 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
     # IVA bloque
     iva_block = result.IVA.model_dump() if result.IVA else None
 
+    # bono_social_importe fica só em importes_totalizados, não em costes
+    bono_social_importe = costes.pop("bono_social_importe", None)
+
     # ── importes_totalizados: base de Claude + todos os campos com "importe" ──
     importes_totalizados = dict(otros_raw.get("importes_totalizados") or {})
 
@@ -73,6 +76,16 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
     for k, v in creditos.items():
         if "importe" in k and v is not None:
             importes_totalizados.setdefault(k, v)
+
+    # bono_social_importe em importes_totalizados (removido de costes)
+    if bono_social_importe is not None:
+        importes_totalizados.setdefault("bono_social_importe", bono_social_importe)
+
+    # Totais agregados
+    costes_totales   = round(sum(v for v in costes.values()   if isinstance(v, (int, float)) and v is not None), 2)
+    creditos_totales = round(sum(v for v in creditos.values() if isinstance(v, (int, float)) and v is not None), 2)
+    importes_totalizados["costes_totales"]   = costes_totales
+    importes_totalizados["creditos_totales"] = creditos_totales
 
     return {
         # ── Campos de identificação ───────────────────────────────────────────
