@@ -2,6 +2,216 @@
 
 ---
 
+## 2026-04-17
+
+### [049] `api/claude/prompts.py` — Iberdrola: `precio_final_energia_activa` do RESUMEN
+**Prompt:** Claude extraía 16,71€ (subtotal kWh×preço do DETALLE) em vez de 155,45€ (linha ENERGÍA do RESUMEN DE FACTURA).
+
+**Ficheiro:** `api/claude/prompts.py`
+
+**Mudança:** Adicionada regra na secção Iberdrola: quando existe "RESUMEN DE FACTURA" com linha "ENERGÍA: X €", usar esse valor para `precio_final_energia_activa`. Esse valor agrega potência + energia activa + IEE + serviços do bloco, excluindo descontos apresentados como linhas separadas no RESUMEN.
+
+---
+
+### [048] `api/claude/extractor.py` — fallback `ast.literal_eval` para JSON com aspas simples
+**Prompt:** Claude devolveu JSON inválido com aspas simples (Python-style dict) causando JSONDecodeError.
+
+**Ficheiro:** `api/claude/extractor.py`
+
+**Mudança:** Em `_load()`, adicionado terceiro nível de fallback: `ast.literal_eval(raw)` após falha do `_sanitize_json`. Cobre casos em que Claude usa aspas simples nas chaves/valores do JSON.
+
+---
+
+### [047] `nombre_cliente` — extração do nome do titular + log no terminal
+**Prompt:** Extrair o nome do cliente da factura e incluir nos dados brutos enviados ao WorkDrive. Log no terminal após extracção.
+
+**Ficheiros:** `api/models.py`, `api/claude/prompts.py`, `api/claude/extractor.py`
+
+**Mudança:**
+- `api/models.py`: campo `nombre_cliente: Optional[str] = None` adicionado a `ExtractionResponseAI`
+- `api/claude/prompts.py`: instrução para extrair `nombre_cliente` do cabeçalho/bloco de dados do cliente
+- `api/claude/extractor.py`: log `  Cliente: {result.nombre_cliente}` após CUPS extraído
+- Aparece automaticamente em `_claudeDatosBrutos.json` (não excluído em `_EXCLUDE_FIELDS`)
+- NÃO incluído no payload da sessão (`_build_factura_payload` não o mapeia)
+
+---
+
+### [046] `api/claude/prompts.py` — precio único: regra de coerência pe_p* ↔ consumo_p*
+**Prompt:** Claude continuava a preencher consumo_p2/p3_kwh com leituras desagregadas mesmo em precio único.
+
+**Ficheiro:** `api/claude/prompts.py`
+
+**Mudança:** Adicionada regra directa de coerência: "se pe_p* = null → consumo_p* = null". Exemplos concretos com os valores da fatura Iberdrola 2.0TD (1096 kWh total, desagregado 330/308/458 informativo).
+
+---
+
+### [045] `api/claude/prompts.py` — Iberdrola autoconsumo: exemplo concreto de `compensacion_excedentes_kwh` em `otros`
+**Prompt:** Claude continuava a omitir o campo mesmo após a instrução anterior.
+
+**Ficheiro:** `api/claude/prompts.py`
+
+**Mudança:** Regra Iberdrola autoconsumo reescrita com exemplo JSON explícito (`"otros": { ..., "compensacion_excedentes_kwh": -303.31, ... }`); instrução "NUNCA omitir esta clave" reforçada.
+
+---
+
+### [044] `api/claude/prompts.py` — precio único: exemplo errado/correto explícito para consumo_p*_kwh
+**Prompt:** Claude continuava a usar leituras desagregadas (107/142/510) para consumo_p1/p2/p3 mesmo com precio único.
+
+**Ficheiro:** `api/claude/prompts.py`
+
+**Mudança:** Instrução "PRECIO ÚNICO" reescrita com exemplo correto (`consumo_p1_kwh: 728.65, p2/p3: null`) e exemplo explicitamente marcado como INCORRECTO (`consumo_p1_kwh:107, p2:142, p3:510`).
+
+---
+
+### [043] `api/claude/prompts.py` — precio único: consumo_p1_kwh = total faturado, não leitura desagregada
+**Prompt:** Para precio único, Claude usava leitura desagregada de punta (107 kWh) em vez do total faturado (728,65 kWh).
+
+**Ficheiro:** `api/claude/prompts.py`
+
+**Mudança:** Instrução "PRECIO ÚNICO" ampliada: `consumo_p1_kwh` = total kWh da linha "Energía consumida"; `consumo_p2..p6_kwh` = null; proibido usar leituras desagregadas punta/llano/valle para preencher consumo_p*_kwh em precio único.
+
+---
+
+### [042] `api/claude/prompts.py` — `compensacion_excedentes_kwh` sempre presente em `otros`
+**Prompt:** Campo `compensacion_excedentes_kwh` estava a ser omitido do JSON em vez de aparecer como null.
+
+**Ficheiro:** `api/claude/prompts.py`
+
+**Mudança:** Instrução do campo marcada com "SIEMPRE presente, nunca omitir la clave".
+
+---
+
+### [041] `api/routes/facturas.py` — `pack_iberdrola_hogar_importe` removido de `importes_totalizados`
+**Prompt:** Serviços adicionais (Pack Hogar, etc.) apareciam em `importes_totalizados` por serem copiados automaticamente de `costes`.
+
+**Ficheiro:** `api/routes/facturas.py`
+
+**Mudança:** Loop de cópia de `costes` → `importes_totalizados` substituído por whitelist `_COSTES_ESTRUTURAIS` = {`alquiler_equipos_medida_importe`, `exceso_potencia_importe`, `coste_energia_reactiva`}. Serviços dinâmicos ficam apenas em `costes`.
+
+---
+
+### [040] `api/claude/prompts.py` — MOD-002/003/004 aplicados ao prompt
+**Prompt:** Aplicar melhorias documentadas em prompt_improvements.md ao prompt do Claude API.
+
+**Ficheiro:** `api/claude/prompts.py`
+
+**Mudança:**
+- MOD-002: `compensacion_excedentes_kwh` movido de `creditos` para campo direto em `otros`; `compensacion_excedentes_importe` permanece em `creditos`; regra Iberdrola autoconsumo atualizada; fórmula de cuadre atualizada
+- MOD-003: instrução explícita para usar "Energía consumida X kWh" do bloco ENERGÍA; proibição de usar leituras absolutas do contador do rodapé; distinção entre lecturas acumuladas vs. consumos desagregados do período
+- MOD-004: `otros.costes` passa a incluir importe bruto de serviços adicionais com desconto (Pack Hogar, Facilita, etc.); desconto associado em `otros.creditos` com valor negativo
+
+---
+
+### [037] `prompt_improvements.md` — MOD-004: serviços adicionais com desconto em `costes`/`creditos`
+**Prompt:** Pack Iberdrola Hogar e similares devem ter o valor bruto em `costes` e o desconto em `creditos`.
+
+**Ficheiro:** `prompt_improvements.md`
+
+**Mudança:** MOD-004 adicionado — valor bruto do serviço em `costes`, desconto associado em `creditos`; aplicável a Iberdrola, TotalEnergies e similares.
+
+---
+
+### [036] `prompt_improvements.md` — MOD-003: consumo kWh — usar "Energía consumida", não leituras do contador
+**Prompt:** Claude captura leituras absolutas do contador (23.501 kWh) em vez do consumo do período (728,65 kWh).
+
+**Ficheiro:** `prompt_improvements.md`
+
+**Mudança:** MOD-003 adicionado — hierarquia de fontes para consumo kWh; proibição explícita de usar leituras desagregadas absolutas do rodapé.
+
+---
+
+### [035] `prompt_improvements.md` — MOD-002: `compensacion_excedentes_kwh` campo direto em `otros`
+**Prompt:** Campo kWh não deve estar em `creditos` (monetário) — mover para campo direto em `otros`.
+
+**Ficheiro:** `prompt_improvements.md`
+
+**Mudança:** MOD-002 adicionado — `compensacion_excedentes_kwh` como campo direto em `otros` (mesmo nível que costes/creditos); `compensacion_excedentes_importe` permanece em `creditos`.
+
+---
+
+### [034] `prompt_improvements.md` — verificação numérica obrigatória antes de confirmar desconto aplicado
+**Prompt:** Claude deve verificar numericamente se o desconto foi de facto aplicado no valor extraído antes de colocar null em creditos.
+
+**Ficheiro:** `prompt_improvements.md`
+
+**Mudança:**
+- Adicionada secção "Verificação numérica obrigatória" com tabela de fórmulas por tipo de padrão
+- Tolerância definida: ≤ 0,02 € (arredondamento da factura)
+- Se verificação falha (diferença > 0,02 €): manter em `creditos` + aviso em `observacion`
+- Exemplo de verificação concreto com a fatura TotalEnergies
+- Instrução do prompt atualizada: PASSO 1 (identificação) + PASSO 2 (verificação numérica)
+- Formato de `observacion` inclui agora os valores do cálculo de confirmação
+
+---
+
+### [033] `prompt_improvements.mod` → `prompt_improvements.md` — renomeado para markdown
+**Prompt:** Converter ficheiro .mod para .md.
+
+**Ficheiro:** `prompt_improvements.md`
+
+**Mudança:** Renomeado de `.mod` para `.md`.
+
+---
+
+### [032] `prompt_improvements.md` — padrões de desconto já aplicado expandidos
+**Prompt:** Adicionar variações ao padrão "Subtotal - Descuento = Total" para cobrir outros formatos de facturas.
+
+**Ficheiro:** `prompt_improvements.md`
+
+**Mudança:**
+- Adicionadas 6 categorias de padrões: tabular com coluna Descuento, inline numa linha, preço unitário já descontado, duas linhas consecutivas, rótulo explícito, "Ahorro" dentro do bloco
+- Adicionada secção "Indicadores negativos" — quando a regra NÃO deve ser aplicada (evitar falsos positivos)
+
+---
+
+### [031] `prompt_improvements.mod` — criado ficheiro de melhorias ao prompt Claude API
+**Prompt:** Documentar problema de dupla contabilidade de descontos detectado na fatura TotalEnergies 1NSN251100248746; criar ficheiro de referência para melhorias ao prompt.
+
+**Ficheiro:** `prompt_improvements.mod` (novo)
+
+**Mudança:**
+- MOD-001: desconto 7% consumo eléctrico já aplicado no `precio_final_energia_activa` (27,59€) mas também extraído em `creditos.descuento_7_pct_consumo_electrico` (−2,08€)
+- Instrução proposta: quando desconto já aplicado → campo `creditos` = null + entrada em `observacion` com descrição
+- Inclui URL WorkDrive de referência e padrões iniciais de identificação
+
+---
+
+### [030] `api/routes/facturas.py` — `costes_totales` e `creditos_totales` com `round(2)`
+**Prompt:** Limitar casas decimais de costes_totales e creditos_totales a dois dígitos.
+
+**Ficheiro:** `api/routes/facturas.py`
+
+**Mudança:**
+- `costes_totales` e `creditos_totales` passam por `round(..., 2)` antes de serem escritos em `importes_totalizados`
+
+---
+
+### [029] `api/routes/facturas.py` — `bono_social_importe` removido de `costes`; `costes_totales`/`creditos_totales` adicionados
+**Prompt:** Retirar `bono_social_importe` de `otros.costes`; manter em `importes_totalizados`; adicionar `costes_totales` e `creditos_totales` em `importes_totalizados`.
+
+**Ficheiro:** `api/routes/facturas.py`
+
+**Mudança:**
+- `bono_social_importe` extraído de `costes` via `pop` antes de ser usado em `otros.costes`
+- Continua em `importes_totalizados` via `setdefault`
+- `costes_totales` = soma dos valores numéricos de `costes` (após remoção do `bono_social_importe`)
+- `creditos_totales` = soma dos valores numéricos de `creditos`
+
+---
+
+### [028] `api/zoho_workdrive.py` + `api/routes/facturas.py` — `workdrive_id` injetado na sessão após criação da pasta
+**Prompt:** Após criar pasta no WorkDrive, adicionar o `workdrive_id` (subfolder_id) no payload da mesma sessão.
+
+**Ficheiros:** `api/zoho_workdrive.py`, `api/routes/facturas.py`
+
+**Mudança:**
+- `upload_factura_files` recebe novo parâmetro `session_id: str | None = None`
+- Importa `actualizar_sesion` de `api.routes.sesion`
+- Após criação bem-sucedida da subpasta, chama `actualizar_sesion(session_id, {**session_payload, "workdrive_id": subfolder_id})`
+- `facturas.py` passa `session_id=result.session_id` na chamada a `upload_factura_files`
+
+---
+
 ## 2026-04-16
 
 ### [027] `api/claude/prompts.py` — _PREAMBLE substituído por versão completa
