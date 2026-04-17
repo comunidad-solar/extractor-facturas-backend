@@ -4,6 +4,24 @@
 
 ## 2026-04-17
 
+### [051] Campo `advertencia_ano` renomeado e convertido para booleano
+**Prompt:** Campo renomeado de `advertencia` para `advertencia_ano`, tipo alterado de string para bool (true se ano < 2025, false caso contrário).
+
+**Ficheiros:** `api/models.py`, `api/routes/facturas.py`
+
+---
+
+### [050] Campo `advertencia_ano` — aviso para faturas anteriores a 2025
+**Prompt:** Bloquear/avisar quando a fatura é de ano < 2025.
+
+**Ficheiros:** `api/models.py`, `api/routes/facturas.py`
+
+**Mudança:**
+- `api/models.py`: campo `advertencia: Optional[str] = None` adicionado a `ExtractionResponseAI`
+- `api/routes/facturas.py`: após extracção, parseia `periodo_fin` (ou `periodo_inicio`). Se ano < 2025, preenche `result.advertencia` com mensagem em português e imprime aviso no terminal. Suporta formatos DD/MM/YYYY e YYYY-MM-DD.
+
+---
+
 ### [049] `api/claude/prompts.py` — Iberdrola: `precio_final_energia_activa` do RESUMEN
 **Prompt:** Claude extraía 16,71€ (subtotal kWh×preço do DETALLE) em vez de 155,45€ (linha ENERGÍA do RESUMEN DE FACTURA).
 
