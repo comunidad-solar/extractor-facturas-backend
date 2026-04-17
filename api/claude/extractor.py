@@ -85,7 +85,14 @@ def _parse_json_from_text(text: str) -> dict:
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
-            return json.loads(_sanitize_json(raw))
+            try:
+                return json.loads(_sanitize_json(raw))
+            except json.JSONDecodeError:
+                import ast
+                result = ast.literal_eval(raw)
+                if not isinstance(result, dict):
+                    raise ValueError("ast.literal_eval no devolvió dict")
+                return result
 
     # Bloque ```json ... ``` cerrado
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
@@ -217,6 +224,7 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
           f"  |  cache_read: {getattr(usage, 'cache_read_input_tokens', 0):,}"
           f"  |  cache_creation: {getattr(usage, 'cache_creation_input_tokens', 0):,}")
     print(f"  CUPS extraído: {result.cups or '(no detectado)'}")
+    print(f"  Cliente: {result.nombre_cliente or '(no detectado)'}")
     print(f"  Comercializadora: {result.comercializadora or '(no detectada)'}")
     print(f"  Período: {result.periodo_inicio} → {result.periodo_fin}")
     print(f"  Importe factura: {result.importe_factura} €")
