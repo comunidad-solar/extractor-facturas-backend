@@ -8,6 +8,7 @@ import re
 
 from api.claude.client import get_client
 from api.claude.prompts import SYSTEM_PROMPT
+from api.claude.pipeline import run_pipeline
 from api.models import ExtractionResponseAI
 
 MODEL = "claude-opus-4-7"
@@ -169,71 +170,5 @@ def _build_response(data: dict) -> ExtractionResponseAI:
 
 
 def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
-    """Envía el PDF a Claude en base64 y devuelve los datos estructurados."""
-    print(f"\n{'='*70}")
-    print(f"  *** API CLAUDE ***  ({MODEL})")
-    print(f"{'='*70}")
-    print(f"  PDF recibido: {len(pdf_bytes):,} bytes")
-    print(f"  Enviando a Claude...")
-
-    client = get_client()
-    pdf_b64 = base64.standard_b64encode(pdf_bytes).decode("utf-8")
-
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=MAX_TOKENS,
-        system=[
-            {
-                "type": "text",
-                "text": SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": pdf_b64,
-                        },
-                    },
-                    {"type": "text", "text": _USER_TEXT},
-                ],
-            }
-        ],
-    )
-
-    text = response.content[0].text if response.content else ""
-
-    print(f"  stop_reason: {response.stop_reason}  |  chars resposta: {len(text)}")
-
-    try:
-        data = _parse_json_from_text(text)
-    except (json.JSONDecodeError, ValueError) as e:
-        print(f"  ❌  JSON inválido: {e}")
-        raise ValueError(f"Claude no devolvió JSON válido: {e}")
-
-    result = _build_response(data)
-
-    usage = response.usage
-    print(f"  ✅  Extracción completada")
-    print(f"  Tokens — input: {usage.input_tokens:,}  |  output: {usage.output_tokens:,}"
-          f"  |  cache_read: {getattr(usage, 'cache_read_input_tokens', 0):,}"
-          f"  |  cache_creation: {getattr(usage, 'cache_creation_input_tokens', 0):,}")
-    print(f"  CUPS extraído: {result.cups or '(no detectado)'}")
-    print(f"  Cliente: {result.nombre_cliente or '(no detectado)'}")
-    print(f"  Comercializadora: {result.comercializadora or '(no detectada)'}")
-    print(f"  Período: {result.periodo_inicio} → {result.periodo_fin}")
-    print(f"  Importe factura: {result.importe_factura} €")
-    if result.margen_de_error is not None:
-        ok = result.margen_de_error <= 5.0
-        icon = "✅" if ok else "⚠️ "
-        print(f"  {icon}  Margen de error: {result.margen_de_error:.2f}%"
-              f"  ({'dentro del 5%' if ok else 'FUERA DEL 5% — revisar campos'})")
-    print(f"{'='*70}\n")
-
-    return result
+    """Envía el PDF al pipeline multi-agente y devuelve los datos estructurados."""
+    return run_pipeline(pdf_bytes)
