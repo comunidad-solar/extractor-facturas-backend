@@ -280,8 +280,6 @@ def _calc_margen(
         for key, val in (costes_block or {}).items():
             if val is None:
                 continue
-            if key == "exceso_potencia_importe":
-                continue  # always null when inside; if not null, it's separate → sum it
             if key == "alquiler_equipos_medida_importe":
                 continue  # already in imp_alquiler_eur
             if key == "coste_energia_reactiva":
