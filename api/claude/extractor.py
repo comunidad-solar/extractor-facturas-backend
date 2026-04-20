@@ -10,8 +10,9 @@ from api.claude.client import get_client
 from api.claude.prompts import SYSTEM_PROMPT
 from api.models import ExtractionResponseAI
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "claude-opus-4-7"
 MAX_TOKENS = 8192
+
 
 _VALID_FIELDS = set(ExtractionResponseAI.model_fields.keys())
 
