@@ -47,3 +47,5 @@ skills-lock.json
 
 # ── Certificados ─────────────────────────────────────────────────────────────
 *.pem
+log.md
+prompt_improvements.md

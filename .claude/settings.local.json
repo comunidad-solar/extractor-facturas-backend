@@ -26,7 +26,8 @@
       "Bash(taskkill /PID 11324 /F)",
       "Bash(py -3.13 -c \"from api.main import app; print\\('OK'\\)\")",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(curl -s https://docs.anthropic.com)"
     ]
   }
 }

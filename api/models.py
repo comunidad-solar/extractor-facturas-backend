@@ -135,5 +135,11 @@ class ExtractionResponseAI(ExtractionResponse):
     # Reconciliación contable R13 (calculada en el servidor)
     validacion_cuadre:              Optional[ValidacionCuadre] = None
 
+    # Nombre del cliente titular de la factura
+    nombre_cliente:                 Optional[str]      = None
+
+    # True si la factura es anterior a 2025 (datos pueden estar desactualizados)
+    advertencia_ano:                bool               = False
+
     # ID de sesión creada en /sesion tras la extracción
     session_id:                     Optional[str]      = None

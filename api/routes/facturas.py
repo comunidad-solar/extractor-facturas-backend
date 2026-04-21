@@ -51,6 +51,9 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
     # IVA bloque
     iva_block = result.IVA.model_dump() if result.IVA else None
 
+    # bono_social_importe fica só em importes_totalizados, não em costes
+    bono_social_importe = costes.pop("bono_social_importe", None)
+
     # ── importes_totalizados: base de Claude + todos os campos com "importe" ──
     importes_totalizados = dict(otros_raw.get("importes_totalizados") or {})
 
@@ -64,15 +67,26 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
         if v is not None:
             importes_totalizados.setdefault(k, v)
 
-    # Campos de otros.costes com "importe" no nome
+    # Só os costes estruturais vão para importes_totalizados (não serviços dinâmicos)
+    _COSTES_ESTRUTURAIS = {"alquiler_equipos_medida_importe", "exceso_potencia_importe", "coste_energia_reactiva"}
     for k, v in costes.items():
-        if "importe" in k and v is not None:
+        if k in _COSTES_ESTRUTURAIS and v is not None:
             importes_totalizados.setdefault(k, v)
 
     # Campos de otros.creditos com "importe" no nome
     for k, v in creditos.items():
         if "importe" in k and v is not None:
             importes_totalizados.setdefault(k, v)
+
+    # bono_social_importe em importes_totalizados (removido de costes)
+    if bono_social_importe is not None:
+        importes_totalizados.setdefault("bono_social_importe", bono_social_importe)
+
+    # Totais agregados
+    costes_totales   = round(sum(v for v in costes.values()   if isinstance(v, (int, float)) and v is not None), 2)
+    creditos_totales = round(sum(v for v in creditos.values() if isinstance(v, (int, float)) and v is not None), 2)
+    importes_totalizados["costes_totales"]   = costes_totales
+    importes_totalizados["creditos_totales"] = creditos_totales
 
     return {
         # ── Campos de identificação ───────────────────────────────────────────
@@ -393,6 +407,19 @@ async def extraer_factura(
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
 
     # _log_cuadre(result)
+
+    # Advertencia si la factura es anterior a 2025
+    _ano_factura = None
+    _fecha_ref = result.periodo_fin or result.periodo_inicio
+    if _fecha_ref:
+        try:
+            partes = _fecha_ref.replace("-", "/").split("/")
+            _ano_factura = int(partes[2]) if len(partes[0]) <= 2 else int(partes[0])
+        except (ValueError, IndexError):
+            pass
+    result.advertencia_ano = bool(_ano_factura and _ano_factura < 2025)
+    if result.advertencia_ano:
+        print(f"  ⚠️  Factura do ano {_ano_factura} — advertencia_ano: true")
 
     # Buscar dealId y mpklogId en Zoho CRM si hay correo
     deal_id, mpklog_id = None, None
