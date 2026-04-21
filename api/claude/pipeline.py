@@ -31,7 +31,6 @@ def _extract_raw(pdf_bytes: bytes) -> dict:
     response = client.messages.create(
         model=RAW_MODEL,
         max_tokens=RAW_MAX_TOKENS,
-        temperature=0,
         system=[{
             "type": "text",
             "text": RAW_SYSTEM_PROMPT,

@@ -32,12 +32,42 @@ def call_haiku(system_prompt: str, raw_data: dict) -> dict:
     return _parse_json(text)
 
 
+def _clean(s: str) -> str:
+    """Normalise common model output issues."""
+    # Stray word appended to a numeric VALUE (after "key": NUMBER...)
+    # Matches only in value position (after ": ") to avoid touching string content.
+    # e.g.  "pp_p4": 0.01526distrib",  →  "pp_p4": 0.01526,
+    s = re.sub(
+        r'(":\s*)(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)[a-zA-Z_]\w*"?(?=\s*[,}\]])',
+        r"\1\2",
+        s,
+    )
+    # Trailing commas before } or ]
+    s = re.sub(r",(\s*[}\]])", r"\1", s)
+    # Python literals
+    s = re.sub(r"\bNone\b", "null", s)
+    s = re.sub(r"\bTrue\b", "true", s)
+    s = re.sub(r"\bFalse\b", "false", s)
+    return s
+
+
 def _parse_json(text: str) -> dict:
     match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
     raw = match.group(1) if match else text.strip()
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        # Remove trailing commas and retry
-        raw = re.sub(r",(\s*[}\]])", r"\1", raw)
-        return json.loads(raw)
+
+    for candidate in (raw, _clean(raw)):
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+
+    # Last resort: extract first {...} block from entire response
+    brace_match = re.search(r"\{[\s\S]*\}", text)
+    if brace_match:
+        try:
+            return json.loads(_clean(brace_match.group(0)))
+        except json.JSONDecodeError:
+            pass
+
+    print(f"  [WARN] _parse_json failed. Raw response:\n{text[:600]}")
+    raise json.JSONDecodeError("Could not parse mapper response", text, 0)

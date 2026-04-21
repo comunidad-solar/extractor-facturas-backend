@@ -28,7 +28,12 @@ REGLAS (aplica en orden):
 5. Períodos sin línea en la factura: pp_p* = null.
    Períodos existentes en tarifa sin potencia contratada: pp_p* = null.
 
-Devuelve ÚNICAMENTE este JSON:
+CRÍTICO — FORMATO JSON:
+- Cada valor numérico es ÚNICAMENTE el número final (ej: 0.000147559). NUNCA texto, letras ni palabras dentro del valor.
+- Si calculas algo mentalmente, escribe SOLO el resultado en el campo JSON. Las explicaciones van en "observacion", no en los valores.
+- No repitas la misma clave. No incluyas comentarios dentro del JSON.
+
+Devuelve ÚNICAMENTE este JSON (sin texto antes ni después del bloque ```json```):
 {
   "pp_p1": <float o null>,
   "pp_p2": <float o null>,

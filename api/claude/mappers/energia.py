@@ -8,6 +8,15 @@ _SYSTEM = """Eres un asistente que asigna los precios de energía (pe_p*) y cons
 
 REGLAS (en orden de prioridad):
 
+CASO DUAL-BLOCK (Producto + ATR separados) — MÁXIMA PRIORIDAD:
+  Si termino_energia.costes_producto_por_periodo NO es null:
+  La factura tiene dos bloques de energía: uno de "Coste de Energía Producto" (capturado en costes_producto_por_periodo)
+  y otro de "Término de Energía ATR" (capturado en lineas con precio €/kWh y importe €).
+  pe_p* = (costes_producto_por_periodo[P*].importe + lineas[P*].importe) / lineas[P*].kwh
+  consumo_p*_kwh = lineas[P*].kwh
+  Obs: "pe_p* = (producto_importe + ATR_importe) / kwh — bloque dual Producto+ATR".
+  NUNCA usar solo el precio ATR de lineas[].precio como pe_p* en este caso.
+
 PRECIO ÚNICO — si todos los kWh tienen el mismo precio independientemente del período horario:
   pe_p1 = ese precio; pe_p2..pe_p6 = null.
   consumo_p1_kwh = total kWh; consumo_p2..p6 = null.
@@ -36,9 +45,9 @@ COHERENCIA pe_p* / consumo_p*:
   Si consumo_pN tiene valor → pe_pN NUNCA puede ser null (y viceversa).
   Excepción: PRECIO ÚNICO → pe_p2..p6 = null Y consumo_p2..p6 = null.
 
-ZEROS vs NULL:
-  Períodos que EXISTEN en la tarifa pero tuvieron 0 kWh → pe_p* = 0.0, consumo_p* = 0.0.
-  Períodos que NO EXISTEN en la tarifa → pe_p* = null, consumo_p* = null.
+NULL vs 0:
+  Si un período NO tiene línea explícita en la factura → pe_p* = null, consumo_p* = null. NUNCA devolver 0 o 0.0 si no hay línea de datos.
+  Solo devuelve 0.0 si la factura incluye explícitamente una línea con "0 kWh" para ese período.
 
 imp_termino_energia_eur: usar "termino_energia.total_bruto" (BRUTO, incluyendo reactiva si la factura la agrupa en ese total). NUNCA el valor neto después de descuentos.
 

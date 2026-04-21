@@ -36,6 +36,9 @@ RAW_SYSTEM_PROMPT = (
     '    "lineas": [\n'
     '      {"periodo": "P1", "kwh": <float>, "precio": <float>, "unidad_precio": "EUR/kWh", "importe": <float>}\n'
     "    ],\n"
+    '    "costes_producto_por_periodo": [\n'
+    '      {"periodo": "P1", "importe": <float>}\n'
+    '    ] o null,\n'
     '    "costes_mercado": {"descripcion": <string>, "importe": <float>} o null,\n'
     '    "reactiva": {"descripcion": <string>, "importe": <float>} o null,\n'
     '    "total_activa_bruto": <float — total energía activa ANTES de reactiva y descuentos>,\n'
@@ -69,6 +72,10 @@ RAW_SYSTEM_PROMPT = (
     "- Si P1 aparece dos veces (dos tramos), incluye AMBAS líneas en el array.\n"
     "- termino_potencia.total_bruto: el total del BLOQUE de potencia tal como la factura lo muestra "
     "(incluyendo exceso y margen si los agrupa en ese total).\n"
+    "- termino_energia.costes_producto_por_periodo: si la factura tiene DOS bloques de energía separados "
+    "(ej: 'Coste de Energía Producto' + 'Término de Energía ATR'), captura el importe del bloque PRODUCTO "
+    "por período en este array. El campo 'lineas' recoge el bloque ATR (precio €/kWh por período). "
+    "Si solo hay un bloque de energía, deja costes_producto_por_periodo = null.\n"
     "- termino_energia.total_activa_bruto: solo energía activa antes de reactiva.\n"
     "- termino_energia.total_bruto: activa + reactiva (si aplica), ANTES de descuentos sobre consumo.\n"
     "- NO incluyas el IVA ni el IEE en los totales de potencia/energía.\n"
