@@ -19,11 +19,17 @@ CASO A — si un período tarifario específico (P1, P2, P3…) tiene MÚLTIPLES
   Obs: "pe_p* media ponderada de N sub-tramos".
   Ejemplo: P1 con (79.76 kWh × 0.092539) + (64.24 kWh × 0.097553) → pe_p1 = 13.65/144 = 0.094792; consumo_p1 = 144.
 
-CASO B — si TODO el período de facturación está dividido temporalmente (cambio de precios a mitad del período):
-  Las líneas NO son del mismo período P*, sino del mismo tramo temporal con distintos P* internos.
-  Señal: el primer grupo de líneas cubre todos los P* (P1, P2, P3) para el tramo 1; el segundo grupo para el tramo 2.
-  En este caso: extraer pe_p1 = precio tramo 1, consumo_p1_kwh = kWh tramo 1 (el total del tramo, NO punta/llano/valle).
-              pe_p2 = precio tramo 2, consumo_p2_kwh = kWh tramo 2.
+CASO B — si TODO el período de facturación está dividido en tramos temporales (cambio de precios a mitad del período):
+  Señales de CASO B (cualquiera de estas):
+    a) Las líneas de energía NO tienen label de período P* (o tienen el mismo label) y están diferenciadas por rango de fechas (ej: "16/12/2025-31/12/2025" y "31/12/2025-19/01/2026").
+    b) El primer grupo de líneas cubre todos los P* (P1, P2, P3) para el tramo 1; el segundo grupo para el tramo 2.
+  En CASO B: asignar tramo 1 → pe_p1/consumo_p1, tramo 2 → pe_p2/consumo_p2. NUNCA calcular media ponderada.
+  Si cada tramo tiene un único precio para todos sus kWh (no discrimina punta/llano/valle internamente):
+    pe_p1 = precio del tramo 1, consumo_p1_kwh = kWh del tramo 1.
+    pe_p2 = precio del tramo 2, consumo_p2_kwh = kWh del tramo 2.
+  Ejemplo Iberdrola 2.0TD: líneas "76 kWh × 0.17347" (tramo 16/12-31/12) y "176 kWh × 0.18051" (tramo 31/12-19/01):
+    pe_p1=0.17347, consumo_p1_kwh=76, pe_p2=0.18051, consumo_p2_kwh=176.
+    INCORRECTO: pe_p1=media_ponderada, pe_p2=null. INCORRECTO: pe_p1=null.
   Obs: "pe_p1/pe_p2 = precios de tramos temporales (cambio DD/MM/YYYY), no períodos tarifarios P1/P2".
 
 COHERENCIA pe_p* / consumo_p*:
