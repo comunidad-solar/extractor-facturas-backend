@@ -24,6 +24,7 @@ def call_haiku(system_prompt: str, raw_data: dict) -> dict:
     response = client.messages.create(
         model=MAPPER_MODEL,
         max_tokens=MAPPER_MAX_TOKENS,
+        temperature=0,
         system=system_prompt,
         messages=[{"role": "user", "content": user_text}],
     )
