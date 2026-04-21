@@ -314,7 +314,7 @@ def run_pipeline(pdf_bytes: bytes) -> ExtractionResponseAI:
     raw = _extract_raw(pdf_bytes)
     print(f"  [Stage 1] Raw extraído: {raw.get('meta', {}).get('cups', '?')}")
 
-    print("  [Stage 2] Ejecutando mappers en paralelo (haiku × 4)...")
+    print("  [Stage 2] Ejecutando mappers en paralelo (Sonnet × 4)...")
     mapped = _run_mappers(raw)
 
     print("  [Stage 3] Ensamblando ExtractionResponseAI...")
