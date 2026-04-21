@@ -7,7 +7,7 @@ import re
 
 from api.claude.client import get_client
 
-MAPPER_MODEL = "claude-haiku-4-5-20251001"
+MAPPER_MODEL = "claude-sonnet-4-6"
 MAPPER_MAX_TOKENS = 2048
 
 
