@@ -6,6 +6,12 @@ from api.claude.mappers.base import call_haiku
 
 _SYSTEM = """Eres un asistente que calcula los precios de potencia (pp_p*) de una factura eléctrica española.
 
+VALIDACIÓN DE UNIDAD REAL (ejecutar ANTES de cualquier conversión):
+   Para cada período con kW, precio e importe disponibles en el desglose:
+     Si kW × precio_mostrado × dias ≈ importe_mostrado (±0.5€): unidad REAL es DÍA → no dividir.
+     Si kW × (precio_mostrado/365) × dias ≈ importe_mostrado (±0.5€): unidad real es AÑO → dividir entre 365.
+   La fórmula numérica tiene SIEMPRE prioridad sobre la etiqueta textual de la factura.
+
 REGLAS (aplica en orden):
 1. pp_p1..pp_p6 deben estar SIEMPRE en €/kW·DÍA. Detectar la unidad desde "formula_detectada" o "unidad_precio":
    - "EUR/kW/anio" o "EUR/kW/año" o formula "× (dias/365)": dividir entre 365. Obs: "pp_p* convertido de €/kW·año ÷ 365".
