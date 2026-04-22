@@ -139,6 +139,11 @@ def _assemble(raw: dict, mapped: dict) -> ExtractionResponseAI:
     imp_alquiler_eur = alquiler_data.get("total")
     alq_lines = alquiler_data.get("lineas", [])
     alq_eq_dia = alq_lines[0].get("precio_dia") if alq_lines else None
+    if alq_eq_dia is None and imp_alquiler_eur and dias_facturados:
+        try:
+            alq_eq_dia = round(imp_alquiler_eur / int(dias_facturados), 6)
+        except (ValueError, ZeroDivisionError):
+            pass
 
     # Cargas (exceso + reactiva)
     exceso_importe = cargas.get("exceso_potencia_importe")

@@ -19,14 +19,14 @@ REGLA ENERGÍA REACTIVA:
   Verificar: ¿termino_energia.total_bruto incluye la reactiva?
   Si "reactiva.importe" + total_activa_bruto ≈ total_bruto → reactiva DENTRO (inside=true).
   Si total_bruto = solo energía activa y reactiva es línea aparte → FUERA (inside=false).
-  Cuando inside=true → coste_energia_reactiva en costes tiene su valor informativo PERO no se suma en cuadre.
-  Cuando inside=false → se suma en cuadre.
+  Cuando inside=true → coste_energia_reactiva en costes debe ser null (ya está contabilizada en imp_termino_energia_eur — poner cualquier valor causa doble contabilidad).
+  Cuando inside=false → coste_energia_reactiva tiene valor y se suma en cuadre.
 
 Devuelve ÚNICAMENTE este JSON:
 {
   "exceso_potencia_importe": <float o null — null si inside=true, valor si inside=false>,
   "exceso_inside_potencia": <true|false>,
-  "coste_energia_reactiva": <float o null — siempre el importe si existe, null si no hay reactiva>,
+  "coste_energia_reactiva": <float si inside=false, null si inside=true o si no hay reactiva>,
   "reactiva_inside_energia": <true|false>,
   "observacion": [<string — explicación de cada decisión>]
 }"""
