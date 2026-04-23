@@ -182,7 +182,6 @@ def extract_with_claude(pdf_bytes: bytes) -> ExtractionResponseAI:
     response = client.messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS,
-        temperature=0,
         system=[
             {
                 "type": "text",
