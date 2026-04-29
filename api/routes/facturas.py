@@ -19,6 +19,8 @@ from api.zoho_workdrive import upload_factura_files
 
 router = APIRouter(prefix="/facturas", tags=["facturas"])
 
+ZOHO_CRM_ENABLED = False  # ← False para desativar busca de dealId/mpklogId no Zoho
+
 RESULTADOS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "resultados")
 os.makedirs(RESULTADOS_DIR, exist_ok=True)
 
@@ -423,7 +425,9 @@ async def extraer_factura(
 
     # Buscar dealId y mpklogId en Zoho CRM si hay correo
     deal_id, mpklog_id = None, None
-    if correo:
+    if not ZOHO_CRM_ENABLED:
+        print("  ⚠️  ZOHO_CRM_ENABLED=False — busca de dealId/mpklogId desativada")
+    elif correo:
         deal_id, mpklog_id = await asyncio.gather(
             buscar_deal_por_email(correo),
             buscar_mpklog_por_email(correo),

@@ -21,6 +21,8 @@ ZOHO_WEBHOOK = (
 
 router = APIRouter(prefix="/enviar", tags=["enviar"])
 
+ZOHO_CRM_ENABLED = False  # ← False para desativar busca de dealId/mpklogId no Zoho
+
 
 # ---------------------------------------------------------------------------
 # POST /enviar — Zoho Flow (JSON)
@@ -66,7 +68,9 @@ async def enviar_datos(
     correo = parsed.get("cliente", {}).get("correo", "")
     deal_id = None
     mpklog_id = None
-    if correo:
+    if not ZOHO_CRM_ENABLED:
+        print("  ⚠️  ZOHO_CRM_ENABLED=False — busca de dealId/mpklogId desativada")
+    elif correo:
         deal_id, mpklog_id = await asyncio.gather(
             buscar_deal_por_email(correo),
             buscar_mpklog_por_email(correo),
