@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from api.db.database import SessionLocal
 from api.db.repository import db_save_session, db_get_session, db_update_session
@@ -72,7 +72,11 @@ def actualizar_sesion(session_id: str, data: Any) -> bool:
 
 
 @router.post("")
-async def post_sesion(body: Any = None):
+async def post_sesion(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
     session_id = crear_sesion(body)
     return {"session_id": session_id}
 
