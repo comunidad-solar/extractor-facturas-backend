@@ -1,7 +1,8 @@
 # api/routes/sesion.py
 # Sessões temporárias em memória.
-# POST /sesion        — cria sessão com TTL de 30 minutos
-# GET  /sesion/{id}   — lê sessão (apaga se expirada)
+# POST  /sesion        — cria sessão com TTL de 40 minutos
+# GET   /sesion/{id}  — lê sessão (apaga se expirada)
+# PATCH /sesion/{id}  — merge parcial nos dados existentes, renova TTL
 
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -55,6 +56,22 @@ def actualizar_sesion(session_id: str, data: Any) -> bool:
 async def post_sesion(body: Any = None):
     session_id = crear_sesion(body)
     return {"session_id": session_id}
+
+
+@router.patch("/{session_id}")
+async def patch_sesion(session_id: str, body: dict = None):
+    entry = _store.get(session_id)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada.")
+    if datetime.utcnow() > entry["expires_at"]:
+        del _store[session_id]
+        raise HTTPException(status_code=410, detail="Sessão expirada.")
+    if isinstance(entry["data"], dict) and isinstance(body, dict):
+        entry["data"].update(body)
+    else:
+        entry["data"] = body
+    entry["expires_at"] = datetime.utcnow() + timedelta(minutes=_TTL_MINUTES)
+    return {"ok": True}
 
 
 @router.get("/{session_id}")

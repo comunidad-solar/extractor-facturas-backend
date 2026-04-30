@@ -22,7 +22,7 @@ app = FastAPI(
 )
 
 # CORS — permite peticiones desde el frontend React
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://develop.dsg7um3zm296x.amplifyapp.com,http://localhost:5173,http://localhost:3000,https://master.dsg7um3zm296x.amplifyapp.com,https://master.dsg7um3zm296x.amplifyapp.com/,https://main.d3rqv6h66vhq03.amplifyapp.com,https://main.d3rqv6h66vhq03.amplifyapp.com/,https://quoting-new.13.38.9.119.nip.io/api/defaults").split(",")
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://develop.dsg7um3zm296x.amplifyapp.com,http://localhost:5173,http://localhost:3000,https://master.dsg7um3zm296x.amplifyapp.com,https://master.dsg7um3zm296x.amplifyapp.com/,https://main.d3rqv6h66vhq03.amplifyapp.com,https://main.d3rqv6h66vhq03.amplifyapp.com/,https://develop.d3rqv6h66vhq03.amplifyapp.com,https://develop.d3rqv6h66vhq03.amplifyapp.com/,https://quoting-new.13.38.9.119.nip.io/api/defaults").split(",")
 
 app.add_middleware(
     CORSMiddleware,
