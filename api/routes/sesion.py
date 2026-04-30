@@ -1,54 +1,72 @@
 # api/routes/sesion.py
-# Sessões temporárias em memória.
-# POST  /sesion        — cria sessão com TTL de 40 minutos
-# GET   /sesion/{id}  — lê sessão (apaga se expirada)
-# PATCH /sesion/{id}  — merge parcial nos dados existentes, renova TTL
+# Sessões temporárias — memória (TTL 40min) + SQLite (persistente).
+# POST  /sesion        — cria sessão
+# GET   /sesion/{id}   — lê sessão (memória → DB fallback)
+# PATCH /sesion/{id}   — merge parcial, renova TTL
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
-
-from fastapi import APIRouter, HTTPException
 from typing import Any
 
+from fastapi import APIRouter, HTTPException
+
+from api.db.database import SessionLocal
+from api.db.repository import db_save_session, db_get_session, db_update_session
+
 _store: dict[str, dict] = {}
-# { session_id: { "data": {...}, "expires_at": datetime } }
-
 router = APIRouter(prefix="/sesion", tags=["sesion"])
-
 _TTL_MINUTES = 40
 
 
 def crear_sesion(data: Any) -> str:
-    """Guarda data no store e devolve o session_id gerado."""
     session_id = str(uuid4())
-    _store[session_id] = {
-        "data":       data,
-        "expires_at": datetime.utcnow() + timedelta(minutes=_TTL_MINUTES),
-    }
+    expires_at_mem = datetime.now(timezone.utc) + timedelta(minutes=_TTL_MINUTES)
+    _store[session_id] = {"data": data, "expires_at": expires_at_mem}
+    with SessionLocal() as db:
+        db_save_session(db, session_id, data, expires_at=None)  # NULL = forever
     return session_id
 
 
 def leer_sesion(session_id: str) -> Any | None:
-    """Devuelve los datos de la sesión o None si no existe/expiró."""
+    # 1 — memory hit
     entry = _store.get(session_id)
-    if entry is None:
-        return None
-    if datetime.utcnow() > entry["expires_at"]:
+    if entry is not None:
+        if datetime.now(timezone.utc) <= entry["expires_at"]:
+            return entry["data"]
         del _store[session_id]
+
+    # 2 — DB fallback
+    with SessionLocal() as db:
+        data = db_get_session(db, session_id)
+    if data is None:
         return None
-    return entry["data"]
+    # restore to memory for subsequent fast reads
+    _store[session_id] = {
+        "data": data,
+        "expires_at": datetime.now(timezone.utc) + timedelta(minutes=_TTL_MINUTES),
+    }
+    return data
 
 
 def actualizar_sesion(session_id: str, data: Any) -> bool:
-    """Actualiza los datos de una sesión existente. Devuelve False si no existe o expiró."""
     entry = _store.get(session_id)
-    if entry is None:
+    if entry is not None:
+        if datetime.now(timezone.utc) > entry["expires_at"]:
+            del _store[session_id]
+        else:
+            entry["data"] = data
+            entry["expires_at"] = datetime.now(timezone.utc) + timedelta(minutes=_TTL_MINUTES)
+
+    with SessionLocal() as db:
+        updated = db_update_session(db, session_id, data)
+
+    if not updated:
+        # session exists in memory but not in DB yet (edge case) — save it
+        if session_id in _store:
+            with SessionLocal() as db:
+                db_save_session(db, session_id, data, expires_at=None)
+            return True
         return False
-    if datetime.utcnow() > entry["expires_at"]:
-        del _store[session_id]
-        return False
-    entry["data"] = data
-    entry["expires_at"] = datetime.utcnow() + timedelta(minutes=_TTL_MINUTES)  # renueva TTL
     return True
 
 
@@ -60,26 +78,20 @@ async def post_sesion(body: Any = None):
 
 @router.patch("/{session_id}")
 async def patch_sesion(session_id: str, body: dict = None):
-    entry = _store.get(session_id)
-    if entry is None:
+    existing = leer_sesion(session_id)
+    if existing is None:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
-    if datetime.utcnow() > entry["expires_at"]:
-        del _store[session_id]
-        raise HTTPException(status_code=410, detail="Sessão expirada.")
-    if isinstance(entry["data"], dict) and isinstance(body, dict):
-        entry["data"].update(body)
+    if isinstance(existing, dict) and isinstance(body, dict):
+        merged = {**existing, **body}
     else:
-        entry["data"] = body
-    entry["expires_at"] = datetime.utcnow() + timedelta(minutes=_TTL_MINUTES)
+        merged = body
+    actualizar_sesion(session_id, merged)
     return {"ok": True}
 
 
 @router.get("/{session_id}")
 async def get_sesion(session_id: str):
-    entry = _store.get(session_id)
-    if entry is None:
+    data = leer_sesion(session_id)
+    if data is None:
         raise HTTPException(status_code=404, detail="Sessão não encontrada.")
-    if datetime.utcnow() > entry["expires_at"]:
-        del _store[session_id]
-        raise HTTPException(status_code=410, detail="Sessão expirada.")
-    return entry["data"]
+    return data
