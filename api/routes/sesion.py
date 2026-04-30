@@ -14,6 +14,7 @@ from api.db.database import SessionLocal
 from api.db.repository import db_save_session, db_get_session, db_update_session
 
 _store: dict[str, dict] = {}
+# { session_id: { "data": Any, "expires_at": datetime } }
 router = APIRouter(prefix="/sesion", tags=["sesion"])
 _TTL_MINUTES = 40
 

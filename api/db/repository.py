@@ -44,7 +44,6 @@ def db_update_session(db: Session, session_id: str, payload: Any) -> bool:
         return False
     url = payload.get("url") if isinstance(payload, dict) else None
     record.payload = json.dumps(payload, ensure_ascii=False, default=str)
-    if url:
-        record.url = url
+    record.url = url  # update (or clear) in sync with payload
     db.commit()
     return True
