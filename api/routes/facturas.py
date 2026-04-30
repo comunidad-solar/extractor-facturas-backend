@@ -9,7 +9,7 @@ import os
 from typing import Optional
 
 import anthropic
-from fastapi import APIRouter, Form, UploadFile, File, HTTPException
+from fastapi import APIRouter, Form, UploadFile, File, HTTPException, Request
 
 from api.claude.extractor import extract_with_claude
 from api.models import ExtractionResponseAI
@@ -366,6 +366,7 @@ def _log_cuadre(result: ExtractionResponseAI) -> None:
 @router.post("/extraer", response_model=ExtractionResponseAI,
              response_model_exclude=_EXCLUDE)
 async def extraer_factura(
+    request: Request,
     file: UploadFile = File(...),
     data: Optional[str] = Form(None, description='JSON: {"cliente": {...}, "ce": {...}, "Fsmstate": "...", "FsmPrevious": "..."}'),
 ):
@@ -438,12 +439,21 @@ async def extraer_factura(
         extra["cliente"]["dealId"]   = deal_id
         extra["cliente"]["mpklogId"] = mpklog_id
 
+    # Extractor URL baseada na origem do pedido
+    _origin = request.headers.get("origin", "")
+    _extractor_url = (
+        "https://extractor-dev.13.38.9.119.nip.io"
+        if "develop.dsg7um3zm296x.amplifyapp.com" in _origin
+        else "https://extractor.13.38.9.119.nip.io"
+    )
+
     # Construir payload completo para la sesión
     session_payload = {
         **extra,                             # cliente, ce, Fsmstate, FsmPrevious, ...
-        "factura":  _build_factura_payload(result),
-        "dealId":   deal_id,
-        "mpklogId": mpklog_id,
+        "factura":      _build_factura_payload(result),
+        "dealId":       deal_id,
+        "mpklogId":     mpklog_id,
+        "extractor_url": _extractor_url,
     }
 
     result.session_id = crear_sesion(session_payload)
