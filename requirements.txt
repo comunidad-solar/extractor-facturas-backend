@@ -21,3 +21,7 @@ httpx
 
 # Claude API
 anthropic
+
+# Database
+sqlalchemy
+alembic

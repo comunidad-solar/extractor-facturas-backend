@@ -8,6 +8,8 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from alembic.config import Config as AlembicConfig
+from alembic import command as alembic_command
 from api.routes.facturas     import router as facturas_router
 from api.routes.facturas_ai  import router as facturas_ai_router
 from api.routes.cups         import router as cups_router
@@ -20,6 +22,15 @@ app = FastAPI(
     description="API para extraer campos de facturas eléctricas españolas.",
     version="1.0.0",
 )
+
+# Ejecutar migraciones de Alembic al iniciar
+def _run_migrations() -> None:
+    _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cfg = AlembicConfig(os.path.join(_base, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(_base, "alembic"))
+    alembic_command.upgrade(cfg, "head")
+
+_run_migrations()
 
 # CORS — permite peticiones desde el frontend React
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://develop.dsg7um3zm296x.amplifyapp.com,http://localhost:5173,http://localhost:3000,https://master.dsg7um3zm296x.amplifyapp.com,https://master.dsg7um3zm296x.amplifyapp.com/,https://main.d3rqv6h66vhq03.amplifyapp.com,https://main.d3rqv6h66vhq03.amplifyapp.com/,https://develop.d3rqv6h66vhq03.amplifyapp.com,https://develop.d3rqv6h66vhq03.amplifyapp.com/,https://quoting-new.13.38.9.119.nip.io/api/defaults").split(",")

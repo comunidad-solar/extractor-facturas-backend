@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  extractor:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:////app/data/sessions.db
+    volumes:
+      - ./data:/app/data
