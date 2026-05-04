@@ -26,7 +26,7 @@ async def guardar_lead_source(payload: LeadSourcePayload):
     if not deal_id:
         raise HTTPException(status_code=404, detail="dealId ainda não disponível na sessão.")
 
-    ok = await actualizar_campo_deal(deal_id, "Lead_Source", payload.plan_url)
+    ok = await actualizar_campo_deal(deal_id, "Fuente_Formulario", payload.plan_url)
     if not ok:
         raise HTTPException(status_code=502, detail="Erro ao actualizar Lead_Source no Zoho CRM.")
 
