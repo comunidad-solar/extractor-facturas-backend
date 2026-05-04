@@ -122,6 +122,39 @@ async def buscar_mpklog_por_email(correo: str) -> str | None:
     return None
 
 
+async def buscar_foto_ce(nombre_ce: str) -> str | None:
+    """Busca CE por Name exacto en Comunidades_Energ_ticas y devuelve Image_URL o None."""
+    token = os.getenv("ZOHO_ACCESS_TOKEN", "")
+    url = f"{ZOHO_API_DOMAIN}/crm/v8/Comunidades_Energ_ticas/search"
+    params = {
+        "criteria": f"(Name:equals:{nombre_ce.strip()})",
+        "fields":   "Name,Image_URL",
+        "per_page": 1,
+    }
+
+    async def _fetch(t: str) -> str | None | Literal["UNAUTHORIZED"]:
+        headers = {"Authorization": f"Zoho-oauthtoken {t}"}
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(url, params=params, headers=headers)
+        if r.status_code == 401:
+            return "UNAUTHORIZED"
+        if r.status_code == 204:
+            return None
+        if r.status_code != 200:
+            print(f"  [ce/foto] Zoho HTTP {r.status_code}: {r.text[:200]}")
+            return None
+        data = r.json().get("data", [])
+        if not data:
+            return None
+        return data[0].get("Image_URL") or None
+
+    result = await _fetch(token)
+    if result == "UNAUTHORIZED":
+        token = await refresh_access_token()
+        result = await _fetch(token)
+    return result if result != "UNAUTHORIZED" else None
+
+
 async def buscar_deal_por_email(correo: str) -> str | None:
     """
     Busca o deal com retry automático para acomodar a latência do Zoho Flow.

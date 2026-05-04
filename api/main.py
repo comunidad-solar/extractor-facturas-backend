@@ -16,6 +16,7 @@ from api.routes.cups         import router as cups_router
 from api.routes.enviar       import router as enviar_router
 from api.routes.contrato     import router as contrato_router
 from api.routes.sesion       import router as sesion_router
+from api.routes.ce           import router as ce_router
 
 app = FastAPI(
     title="Extractor Facturas Luz",
@@ -48,6 +49,7 @@ app.include_router(cups_router)
 app.include_router(enviar_router)
 app.include_router(contrato_router)
 app.include_router(sesion_router)
+app.include_router(ce_router)
 
 
 @app.get("/")
