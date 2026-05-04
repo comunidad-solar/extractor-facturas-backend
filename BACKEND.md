@@ -10,12 +10,21 @@ Stack: Python 3.x + FastAPI + Uvicorn
 ```
 extractor-facturas-backend/
 ├── api/
-│   ├── main.py              # FastAPI app, CORS, registo de routers
+│   ├── main.py              # FastAPI app, CORS, migrações Alembic no startup, registo de routers
 │   ├── models.py            # Schema Pydantic ExtractionResponse (27 campos)
+│   ├── db/
+│   │   ├── database.py      # Engine SQLAlchemy, SessionLocal, Base, DATABASE_URL do env
+│   │   ├── models.py        # ORM model SessionRecord (tabela sessions)
+│   │   └── repository.py    # db_save_session, db_get_session, db_update_session
 │   └── routes/
 │       ├── facturas.py      # POST /facturas/extraer
 │       ├── cups.py          # GET /cups/consultar
-│       └── enviar.py        # POST /enviar (proxy Zoho Flow)
+│       ├── enviar.py        # POST /enviar (proxy Zoho Flow)
+│       └── sesion.py        # POST/GET/PATCH /sesion — dual-layer memória+SQLite
+├── alembic/                 # Migrações versionadas
+│   └── versions/787deedd37e0_create_sessions_table.py
+├── alembic.ini              # Config Alembic (DATABASE_URL via env)
+├── data/                    # SQLite DB em produção (volume Docker)
 ├── extractor/
 │   ├── __init__.py          # Orquestração do pipeline: extract_from_pdf()
 │   ├── base.py              # ExtractionResult, helpers (norm, numeros, datas, log)
@@ -61,6 +70,8 @@ extractor-facturas-backend/
 | `requests` | Chamadas síncronas à API Ingebau (extractor/api.py, cups.py) |
 | `httpx` | Chamadas assíncronas ao webhook Zoho Flow (enviar.py) |
 | `python-dotenv` | Carrega variáveis do ficheiro `.env` |
+| `sqlalchemy` | ORM para acesso ao SQLite — sem SQL raw espalhado |
+| `alembic` | Migrações versionadas do schema da base de dados |
 
 **Ferramentas externas (caminhos hardcoded para Windows):**
 - Tesseract OCR: `C:\Program Files\Tesseract-OCR\tesseract.exe`
@@ -82,6 +93,7 @@ FRONTEND_URL=http://localhost:5173
 | `API_TOKEN` | `extractor/api.py`, `api/routes/cups.py` | Autenticação na API Ingebau |
 | `API_URL` | `extractor/api.py`, `api/routes/cups.py` | Endpoint da API Ingebau |
 | `ALLOWED_ORIGINS` | `api/main.py` | Origens CORS permitidas (default: localhost:5173, localhost:3000, amplify) |
+| `DATABASE_URL` | `api/db/database.py` | URL SQLAlchemy. Default: `sqlite:///./sessions.db`. Docker: `sqlite:////app/data/sessions.db` |
 
 > `CALC_BACKEND_URL` foi **removida** — o `/enviar` já não faz forward para backend de cálculo.
 
@@ -98,6 +110,52 @@ Resposta: { "status": "ok", "version": "1.0.0" }
 ```
 Resposta: { "status": "ok", "service": "extractor-facturas" }
 ```
+
+---
+
+### `POST /sesion`
+
+**Propósito:** Cria sessão temporária com payload JSON. Guarda em memória (40min TTL) + SQLite (permanente).
+
+**Request:**
+```
+Content-Type: application/json
+Body: qualquer JSON (cliente, factura, Fsmstate, etc.)
+```
+
+**Resposta (200):**
+```json
+{ "session_id": "550e8400-e29b-41d4-a716-446655440000" }
+```
+
+---
+
+### `GET /sesion/{session_id}`
+
+**Propósito:** Lê sessão. Memória primeiro → fallback SQLite se expirada ou após restart.
+
+**Resposta (200):** payload JSON completo (inclui `facturaPreview` após PATCH do cotizador)
+
+**Erros:** 404 (não encontrada ou expirada sem DB)
+
+---
+
+### `PATCH /sesion/{session_id}`
+
+**Propósito:** Merge parcial do body JSON nos dados existentes. Renova TTL em memória. Persiste no SQLite.
+
+**Request:**
+```json
+{
+  "facturaPreview": { "periodo": "Enero 2025", "dias": 31, ... },
+  "url": "https://master.dsg7um3zm296x.amplifyapp.com/?...&session_id=XXX",
+  "ahorro_anual": 281.24
+}
+```
+
+**Resposta (200):** `{ "ok": true }`
+
+**Erros:** 404 (não encontrada)
 
 ---
 
