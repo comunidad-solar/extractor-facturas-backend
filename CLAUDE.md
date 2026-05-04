@@ -14,12 +14,22 @@ Sistema Python para extrair campos-chave de faturas de eletricidade espanholas e
 ```
 extractor-facturas-backend/
 ├── api/
-│   ├── main.py              # FastAPI app, CORS, registo de routers
+│   ├── main.py              # FastAPI app, CORS, migrações Alembic no startup, registo de routers
 │   ├── models.py            # Schemas Pydantic (ExtractionResponse)
+│   ├── db/
+│   │   ├── database.py      # Engine SQLAlchemy, SessionLocal, Base, DATABASE_URL
+│   │   ├── models.py        # ORM model SessionRecord (tabela sessions)
+│   │   └── repository.py    # db_save_session, db_get_session, db_update_session
 │   └── routes/
 │       ├── facturas.py      # POST /facturas/extraer
 │       ├── cups.py          # GET /cups/consultar
-│       └── enviar.py        # POST /enviar (proxy Zoho Flow)
+│       ├── enviar.py        # POST /enviar (proxy Zoho Flow)
+│       └── sesion.py        # POST/GET/PATCH /sesion — memória + SQLite
+├── alembic/                 # Migrações Alembic versionadas
+│   └── versions/
+│       └── 787deedd37e0_create_sessions_table.py
+├── alembic.ini              # Configuração Alembic (DATABASE_URL via env)
+├── data/                    # SQLite DB (volume Docker — não commitado)
 ├── extractor/
 │   ├── __init__.py          # Pipeline principal: extract_from_pdf()
 │   ├── base.py              # ExtractionResult, helpers (norm, numeros, datas)
@@ -60,6 +70,7 @@ extractor-facturas-backend/
 | OCR              | pytesseract + pdf2image + Pillow          |
 | HTTP Client      | requests                                  |
 | Subida de ficheiros | python-multipart                       |
+| Base de dados    | SQLite + SQLAlchemy 2.x (ORM) + Alembic   |
 
 **Ferramentas externas (Windows, caminhos fixos no código):**
 - Tesseract OCR: `C:\Program Files\Tesseract-OCR\tesseract.exe`
@@ -104,6 +115,7 @@ FRONTEND_URL=http://localhost:5173
 - `API_URL` — endpoint da API Ingebau (tem default no código)
 - `FRONTEND_URL` — URL do frontend para CORS (usado como `ALLOWED_ORIGINS`)
 - `CALC_BACKEND_URL` — **removida**: o `/enviar` já não faz forward para backend de cálculo
+- `DATABASE_URL` — URL SQLAlchemy para SQLite. Default: `sqlite:///./sessions.db` (local dev). Docker: `sqlite:////app/data/sessions.db`
 
 ---
 
@@ -126,6 +138,22 @@ FRONTEND_URL=http://localhost:5173
 - **Não aceita ficheiro PDF** (campo `file` foi removido)
 - **Não faz forward para `CALC_BACKEND_URL`** (removido)
 - Devolve: `{"ok": true}`
+
+### `POST /sesion`
+- Cria sessão temporária com payload JSON arbitrário
+- Guarda em memória (TTL 40min) + SQLite (sem expiração)
+- Devolve: `{"session_id": "<uuid>"}`
+
+### `GET /sesion/{session_id}`
+- Lê sessão — memória primeiro, fallback SQLite se expirada/reinício
+- Devolve: payload JSON completo (inclui `facturaPreview` após PATCH do cotizador)
+- Erros: 404 (não encontrada)
+
+### `PATCH /sesion/{session_id}`
+- Merge parcial do body nos dados existentes, renova TTL em memória
+- Cotizador usa este endpoint para adicionar `facturaPreview` e `url` à sessão
+- Devolve: `{"ok": true}`
+- Erros: 404 (não encontrada)
 
 ### `GET /`
 - Devolve: `{"status": "ok", "version": "1.0.0"}`
@@ -233,3 +261,5 @@ O `log.md` é o histórico de decisões do projecto — manter conciso mas compl
 - Não há testes automatizados — ao adicionar funcionalidade nova, testar manualmente via Swagger UI ou GUI.
 - Ao adicionar suporte a nova comercializadora: criar ficheiro em `extractor/parsers/`, registar em `extractor/parsers/__init__.py`, e adicionar padrão de deteção em `extractor/detector.py`.
 - O `/enviar` aceita apenas o campo `data` (Form) — o campo `file` e o forward para `CALC_BACKEND_URL` foram removidos.
+- **Sessões persistem em SQLite** (`api/db/`). Alembic corre migrações automaticamente no startup. Em Docker, o DB fica em `/app/data/sessions.db` (volume `-v /home/ubuntu/data-dev:/app/data`). Sem volume → DB perde-se no redeploy.
+- **Deploy dev EC2:** `cd /home/ubuntu/extractor-facturas-backend && git pull origin DEVELOP && docker stop extractor-facturas-dev && docker rm extractor-facturas-dev && docker build -t extractor-facturas-dev . && mkdir -p /home/ubuntu/data-dev && docker run -d --name extractor-facturas-dev --env-file .env.development -p 8011:8000 --restart always -v /home/ubuntu/data-dev:/app/data -e DATABASE_URL=sqlite:////app/data/sessions.db extractor-facturas-dev`
