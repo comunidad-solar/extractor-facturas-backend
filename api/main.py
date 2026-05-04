@@ -4,6 +4,7 @@
 #
 # Modificado: 2026-02-27 | Rodrigo Costa
 
+import asyncio
 import os
 
 from fastapi import FastAPI
@@ -35,6 +36,23 @@ def _run_migrations() -> None:
     alembic_command.upgrade(cfg, "head")
 
 _run_migrations()
+
+
+@app.on_event("startup")
+async def _startup():
+    from api.zoho_crm import refresh_access_token
+
+    async def _token_refresh_loop():
+        while True:
+            try:
+                await refresh_access_token()
+                print("[token] Zoho token renovado")
+            except Exception as e:
+                print(f"[token] Falha ao renovar token Zoho — {e}")
+            await asyncio.sleep(50 * 60)  # renovar a cada 50 minutos
+
+    asyncio.create_task(_token_refresh_loop())
+
 
 # CORS — permite peticiones desde el frontend React
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://develop.dsg7um3zm296x.amplifyapp.com,http://localhost:5173,http://localhost:3000,https://master.dsg7um3zm296x.amplifyapp.com,https://master.dsg7um3zm296x.amplifyapp.com/,https://main.d3rqv6h66vhq03.amplifyapp.com,https://main.d3rqv6h66vhq03.amplifyapp.com/,https://develop.d3rqv6h66vhq03.amplifyapp.com,https://develop.d3rqv6h66vhq03.amplifyapp.com/,https://quoting-new.13.38.9.119.nip.io/api/defaults").split(",")
