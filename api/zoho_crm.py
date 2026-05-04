@@ -122,6 +122,14 @@ async def buscar_mpklog_por_email(correo: str) -> str | None:
     return None
 
 
+async def _buscar_deal_once(correo: str, token: str) -> str | None | Literal["UNAUTHORIZED"]:
+    return await _fetch_deal(correo, token)
+
+
+async def _buscar_mpklog_once(correo: str, token: str) -> str | None | Literal["UNAUTHORIZED"]:
+    return await _fetch_mpklog(correo, token)
+
+
 async def buscar_foto_ce(nombre_ce: str) -> str | None:
     """Busca CE por Name exacto en Comunidades_Energ_ticas y devuelve Image_URL o None."""
     token = os.getenv("ZOHO_ACCESS_TOKEN", "")
