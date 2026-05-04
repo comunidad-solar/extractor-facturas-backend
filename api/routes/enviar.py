@@ -58,27 +58,38 @@ async def enviar_datos(
 
     print(f"[/enviar] Zoho respondió: {resp.status_code}")
 
-    # --- 2. Aguardar o Flow criar o deal ---
-    delay = int(os.getenv("ZOHO_DEAL_FETCH_DELAY", "4"))
-    await asyncio.sleep(delay)
-
-    # --- 3. Buscar dealId e mpklogId em paralelo ---
+    # --- 2. Tentar obter dealId/mpklogId da sessão do /continuar (callback Zoho) ---
     correo = parsed.get("cliente", {}).get("correo", "")
     deal_id = None
     mpklog_id = None
-    if correo:
-        deal_id, mpklog_id = await asyncio.gather(
-            buscar_deal_por_email(correo),
-            buscar_mpklog_por_email(correo),
-        )
-        if deal_id:
-            print(f"  ✅  dealId recuperado: {deal_id} ({correo})")
-        else:
-            print(f"  ⚠️  dealId não encontrado para: {correo}")
-        if mpklog_id:
-            print(f"  ✅  mpklogId recuperado: {mpklog_id} ({correo})")
-        else:
-            print(f"  ⚠️  mpklogId não encontrado para: {correo}")
+
+    continuar_sid = parsed.get("continuar_session_id")
+    if continuar_sid:
+        continuar_sess = leer_sesion(continuar_sid)
+        if continuar_sess:
+            deal_id   = continuar_sess.get("dealId") or continuar_sess.get("cliente", {}).get("dealId")
+            mpklog_id = continuar_sess.get("mpklogId") or continuar_sess.get("cliente", {}).get("mpklogId")
+            if deal_id:
+                print(f"  ✅  dealId via continuar_session: {deal_id}")
+            if mpklog_id:
+                print(f"  ✅  mpklogId via continuar_session: {mpklog_id}")
+
+    # --- 3. Fallback: buscar no Zoho CRM se ainda em falta ---
+    if (deal_id is None or mpklog_id is None) and correo:
+        delay = int(os.getenv("ZOHO_DEAL_FETCH_DELAY", "4"))
+        await asyncio.sleep(delay)
+        if deal_id is None:
+            deal_id = await buscar_deal_por_email(correo)
+            if deal_id:
+                print(f"  ✅  dealId recuperado via CRM: {deal_id} ({correo})")
+            else:
+                print(f"  ⚠️  dealId não encontrado para: {correo}")
+        if mpklog_id is None:
+            mpklog_id = await buscar_mpklog_por_email(correo)
+            if mpklog_id:
+                print(f"  ✅  mpklogId recuperado via CRM: {mpklog_id} ({correo})")
+            else:
+                print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
     # --- 4. Usar factura extraída por Claude (da sessão) se disponível ---
     existing_session_id = parsed.get("session_id")
