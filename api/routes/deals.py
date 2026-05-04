@@ -1,6 +1,6 @@
 # api/routes/deals.py
 # POST /deals/lead-source
-# Actualiza Lead_Source no Deal com a URL do plan screen.
+# Actualiza Fuente_Formulario no Deal com a URL do plan screen.
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -9,6 +9,8 @@ from api.routes.sesion import leer_sesion
 from api.zoho_crm import actualizar_campo_deal
 
 router = APIRouter(prefix="/deals", tags=["deals"])
+
+_CAMPO = "Fuente_Formulario"
 
 
 class LeadSourcePayload(BaseModel):
@@ -26,9 +28,9 @@ async def guardar_lead_source(payload: LeadSourcePayload):
     if not deal_id:
         raise HTTPException(status_code=404, detail="dealId ainda não disponível na sessão.")
 
-    ok = await actualizar_campo_deal(deal_id, "Fuente_Formulario", payload.plan_url)
+    ok = await actualizar_campo_deal(deal_id, _CAMPO, payload.plan_url)
     if not ok:
-        raise HTTPException(status_code=502, detail="Erro ao actualizar Lead_Source no Zoho CRM.")
+        raise HTTPException(status_code=502, detail=f"Erro ao actualizar campo '{_CAMPO}' no Zoho CRM (dealId={deal_id}).")
 
-    print(f"[deals/lead-source] dealId={deal_id} Lead_Source actualizado: {payload.plan_url[:80]}")
+    print(f"[deals/lead-source] dealId={deal_id} {_CAMPO} actualizado: {payload.plan_url[:80]}")
     return {"ok": True, "dealId": deal_id}
