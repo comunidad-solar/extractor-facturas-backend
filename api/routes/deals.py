@@ -10,7 +10,7 @@ from api.zoho_crm import actualizar_campo_deal
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
-_CAMPO = "Fuente_Formulario"
+_CAMPO = "URL_Calculadora"
 
 
 class LeadSourcePayload(BaseModel):
