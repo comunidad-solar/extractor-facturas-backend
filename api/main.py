@@ -17,6 +17,9 @@ from api.routes.enviar       import router as enviar_router
 from api.routes.contrato     import router as contrato_router
 from api.routes.sesion       import router as sesion_router
 from api.routes.ce           import router as ce_router
+from api.routes.continuar    import router as continuar_router
+from api.routes.zoho_callback import router as zoho_callback_router
+from api.routes.deals        import router as deals_router
 
 app = FastAPI(
     title="Extractor Facturas Luz",
@@ -50,6 +53,9 @@ app.include_router(enviar_router)
 app.include_router(contrato_router)
 app.include_router(sesion_router)
 app.include_router(ce_router)
+app.include_router(continuar_router)
+app.include_router(zoho_callback_router)
+app.include_router(deals_router)
 
 
 @app.get("/")

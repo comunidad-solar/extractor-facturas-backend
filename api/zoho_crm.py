@@ -122,6 +122,37 @@ async def buscar_mpklog_por_email(correo: str) -> str | None:
     return None
 
 
+async def actualizar_campo_deal(deal_id: str, campo: str, valor: str) -> bool:
+    """Actualiza un campo de un Deal en Zoho CRM. Devuelve True si OK."""
+    token = os.getenv("ZOHO_ACCESS_TOKEN", "")
+    url = f"{ZOHO_API_DOMAIN}/crm/v8/Deals/{deal_id}"
+    body = {"data": [{campo: valor}]}
+
+    async def _put(t: str):
+        headers = {"Authorization": f"Zoho-oauthtoken {t}"}
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.put(url, json=body, headers=headers)
+        return r
+
+    r = await _put(token)
+    if r.status_code == 401:
+        token = await refresh_access_token()
+        r = await _put(token)
+
+    if r.status_code in (200, 201):
+        return True
+    print(f"  [zoho_crm] actualizar_campo_deal HTTP {r.status_code}: {r.text[:200]}")
+    return False
+
+
+async def _buscar_deal_once(correo: str, token: str) -> str | None | Literal["UNAUTHORIZED"]:
+    return await _fetch_deal(correo, token)
+
+
+async def _buscar_mpklog_once(correo: str, token: str) -> str | None | Literal["UNAUTHORIZED"]:
+    return await _fetch_mpklog(correo, token)
+
+
 async def buscar_foto_ce(nombre_ce: str) -> str | None:
     """Busca CE por Name exacto en Comunidades_Energ_ticas y devuelve Image_URL o None."""
     token = os.getenv("ZOHO_ACCESS_TOKEN", "")
