@@ -44,7 +44,21 @@ async def enviar_datos(
 
     print(f"[/enviar] Campos recibidos: {list(parsed.keys())}")
 
-    # --- 1. Enviar JSON ao Zoho Flow ---
+    # --- 1. Substituir factura pela versão Claude (da sessão) se disponível ---
+    existing_session_id = parsed.get("session_id")
+    existing_session = leer_sesion(existing_session_id) if existing_session_id else None
+
+    if existing_session and "factura" in existing_session:
+        parsed["factura"] = existing_session["factura"]
+        print(f"[/enviar] factura substituída pela versão Claude (sessão {existing_session_id})")
+    else:
+        factura = dict(parsed.get("factura") or {})
+        factura.pop("archivo", None)
+        factura.pop("api", None)
+        parsed["factura"] = factura
+        print(f"[/enviar] factura obtida do payload do frontend (sem sessão Claude)")
+
+    # --- 2. Enviar JSON ao Zoho Flow (com factura Claude) ---
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(ZOHO_WEBHOOK, json=parsed)
@@ -58,7 +72,7 @@ async def enviar_datos(
 
     print(f"[/enviar] Zoho respondió: {resp.status_code}")
 
-    # --- 2. Tentar obter dealId/mpklogId da sessão do /continuar (callback Zoho) ---
+    # --- 3. Tentar obter dealId/mpklogId da sessão do /continuar (callback Zoho) ---
     correo = parsed.get("cliente", {}).get("correo", "")
     deal_id = None
     mpklog_id = None
@@ -91,22 +105,8 @@ async def enviar_datos(
             else:
                 print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
-    # --- 4. Usar factura extraída por Claude (da sessão) se disponível ---
-    existing_session_id = parsed.get("session_id")
-    existing_session = leer_sesion(existing_session_id) if existing_session_id else None
-
-    if existing_session and "factura" in existing_session:
-        factura = existing_session["factura"]
-        print(f"[/enviar] factura obtida da sessão Claude ({existing_session_id})")
-    else:
-        # Fallback: usar factura do frontend, removendo campos legados
-        factura = dict(parsed.get("factura") or {})
-        factura.pop("archivo", None)
-        factura.pop("api", None)
-        print(f"[/enviar] factura obtida do payload do frontend (sem sessão prévia)")
-
-    # --- 5. Actualizar ou criar sessão ---
-    session_payload = {**parsed, "factura": factura, "dealId": deal_id, "mpklogId": mpklog_id}
+    # --- 4. Actualizar ou criar sessão ---
+    session_payload = {**parsed, "factura": parsed["factura"], "dealId": deal_id, "mpklogId": mpklog_id}
     # Actualizar também dentro de cliente para evitar duplicação
     if "cliente" in session_payload:
         session_payload["cliente"]["dealId"]   = deal_id
