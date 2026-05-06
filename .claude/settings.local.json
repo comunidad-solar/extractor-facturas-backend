@@ -85,14 +85,8 @@
       "Bash(pkill -f \"uvicorn api.main:app --port 8002\")",
       "Bash(uvicorn api.main:app --port 8002)",
       "Bash(echo \"New PID: $!\")",
-<<<<<<< Updated upstream
-      "Bash(python -c \"from api.routes.continuar import router; print\\('ok'\\)\")"
-=======
       "Bash(python -c \"from api.routes.continuar import router; print\\('ok'\\)\")",
-      "Bash(git push *)",
-      "Bash(claude plugin *)",
-      "Bash(git clone *)"
->>>>>>> Stashed changes
+      "Bash(git push *)"
     ]
   }
 }
