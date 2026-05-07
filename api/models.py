@@ -138,6 +138,13 @@ class ExtractionResponseAI(ExtractionResponse):
     # Nombre del cliente titular de la factura
     nombre_cliente:                 Optional[str]      = None
 
+    # Dirección del punto de suministro (CUPS) extraída del PDF
+    direccion_suministro:           Optional[str]      = None
+
+    # Coordenadas geocodificadas del punto de suministro (via Nominatim)
+    suministro_lat:                 Optional[float]    = None
+    suministro_lon:                 Optional[float]    = None
+
     # True si la factura es anterior a 2025 (datos pueden estar desactualizados)
     advertencia_ano:                bool               = False
 

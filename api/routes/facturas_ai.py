@@ -7,11 +7,12 @@ import json
 import os
 
 import anthropic
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 
 from api.claude.extractor import extract_with_claude
 from api.models import ExtractionResponseAI, ValidacionCuadre
 from api.routes.sesion import crear_sesion
+from api.utils.geo import geocode_address
 
 router = APIRouter(prefix="/facturas", tags=["facturas"])
 
@@ -70,7 +71,7 @@ def _calc_validacion_cuadre(result: ExtractionResponseAI) -> ValidacionCuadre:
 
 
 @router.post("/extraer-ai", response_model=ExtractionResponseAI)
-async def extraer_factura_ai(file: UploadFile = File(...)):
+async def extraer_factura_ai(request: Request, file: UploadFile = File(...)):
     """
     Extrae datos de una factura PDF usando Claude API (claude-sonnet-4-6).
     Aplica reconciliación contable R13 y crea una sesión temporal con los datos.
@@ -92,8 +93,22 @@ async def extraer_factura_ai(file: UploadFile = File(...)):
     # Reconciliación contable R13
     result.validacion_cuadre = _calc_validacion_cuadre(result)
 
+    # Geocodificar direccion_suministro via Nominatim
+    if result.direccion_suministro:
+        result.suministro_lat, result.suministro_lon = await geocode_address(result.direccion_suministro)
+        if result.suministro_lat:
+            print(f"[extraer-ai] ✅ geocodificado: {result.suministro_lat},{result.suministro_lon}")
+
+    # Extractor URL baseada na origem do pedido
+    _origin = request.headers.get("origin", "")
+    _extractor_url = (
+        "https://extractor-dev.13.38.9.119.nip.io"
+        if "develop.dsg7um3zm296x.amplifyapp.com" in _origin
+        else "https://extractor.13.38.9.119.nip.io"
+    )
+
     # Crear sesión con el payload extraído
-    result.session_id = crear_sesion(result.model_dump())
+    result.session_id = crear_sesion({**result.model_dump(), "extractor_url": _extractor_url})
 
     # Guardar JSON con sufijo _ai para no colisionar con parsers regex
     cups   = result.cups or "sin_cups"

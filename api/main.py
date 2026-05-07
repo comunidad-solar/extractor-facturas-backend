@@ -4,16 +4,23 @@
 #
 # Modificado: 2026-02-27 | Rodrigo Costa
 
+import asyncio
 import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from alembic.config import Config as AlembicConfig
+from alembic import command as alembic_command
 from api.routes.facturas     import router as facturas_router
 from api.routes.facturas_ai  import router as facturas_ai_router
 from api.routes.cups         import router as cups_router
 from api.routes.enviar       import router as enviar_router
 from api.routes.contrato     import router as contrato_router
 from api.routes.sesion       import router as sesion_router
+from api.routes.ce           import router as ce_router, ces_router
+from api.routes.continuar    import router as continuar_router
+from api.routes.zoho_callback import router as zoho_callback_router
+from api.routes.deals        import router as deals_router
 
 app = FastAPI(
     title="Extractor Facturas Luz",
@@ -21,8 +28,34 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Ejecutar migraciones de Alembic al iniciar
+def _run_migrations() -> None:
+    _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cfg = AlembicConfig(os.path.join(_base, "alembic.ini"))
+    cfg.set_main_option("script_location", os.path.join(_base, "alembic"))
+    alembic_command.upgrade(cfg, "head")
+
+_run_migrations()
+
+
+@app.on_event("startup")
+async def _startup():
+    from api.zoho_crm import refresh_access_token
+
+    async def _token_refresh_loop():
+        while True:
+            try:
+                await refresh_access_token()
+                print("[token] Zoho token renovado")
+            except Exception as e:
+                print(f"[token] Falha ao renovar token Zoho — {e}")
+            await asyncio.sleep(50 * 60)  # renovar a cada 50 minutos
+
+    asyncio.create_task(_token_refresh_loop())
+
+
 # CORS — permite peticiones desde el frontend React
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://develop.dsg7um3zm296x.amplifyapp.com/,https://develop.dsg7um3zm296x.amplifyapp.com,http://localhost:5173,http://localhost:3000,https://master.dsg7um3zm296x.amplifyapp.com,https://master.dsg7um3zm296x.amplifyapp.com/,https://main.d3rqv6h66vhq03.amplifyapp.com,https://main.d3rqv6h66vhq03.amplifyapp.com/,https://quoting-new.13.38.9.119.nip.io/api/defaults").split(",")
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "https://develop.dsg7um3zm296x.amplifyapp.com,http://localhost:5173,http://localhost:3000,https://master.dsg7um3zm296x.amplifyapp.com,https://master.dsg7um3zm296x.amplifyapp.com/,https://main.d3rqv6h66vhq03.amplifyapp.com,https://main.d3rqv6h66vhq03.amplifyapp.com/,https://develop.d3rqv6h66vhq03.amplifyapp.com,https://develop.d3rqv6h66vhq03.amplifyapp.com/,https://quoting-new.13.38.9.119.nip.io/api/defaults").split(",")
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,6 +70,11 @@ app.include_router(cups_router)
 app.include_router(enviar_router)
 app.include_router(contrato_router)
 app.include_router(sesion_router)
+app.include_router(ce_router)
+app.include_router(ces_router)
+app.include_router(continuar_router)
+app.include_router(zoho_callback_router)
+app.include_router(deals_router)
 
 
 @app.get("/")

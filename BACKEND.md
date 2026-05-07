@@ -10,12 +10,25 @@ Stack: Python 3.x + FastAPI + Uvicorn
 ```
 extractor-facturas-backend/
 ├── api/
-│   ├── main.py              # FastAPI app, CORS, registo de routers
+│   ├── main.py              # FastAPI app, CORS, migrações Alembic no startup, registo de routers
 │   ├── models.py            # Schema Pydantic ExtractionResponse (27 campos)
+│   ├── db/
+│   │   ├── database.py      # Engine SQLAlchemy, SessionLocal, Base, DATABASE_URL do env
+│   │   ├── models.py        # ORM model SessionRecord (tabela sessions)
+│   │   └── repository.py    # db_save_session, db_get_session, db_update_session
+│   ├── utils/
+│   │   ├── __init__.py      # pacote utils
+│   │   └── geo.py           # simplify_address(), geocode_address() via Nominatim
 │   └── routes/
-│       ├── facturas.py      # POST /facturas/extraer
+│       ├── facturas.py      # POST /facturas/extraer (pipeline multi-agente Claude)
+│       ├── facturas_ai.py   # POST /facturas/extraer-ai (legado — Claude direto, sem pipeline)
 │       ├── cups.py          # GET /cups/consultar
-│       └── enviar.py        # POST /enviar (proxy Zoho Flow)
+│       ├── enviar.py        # POST /enviar (proxy Zoho Flow)
+│       └── sesion.py        # POST/GET/PATCH /sesion — dual-layer memória+SQLite
+├── alembic/                 # Migrações versionadas
+│   └── versions/787deedd37e0_create_sessions_table.py
+├── alembic.ini              # Config Alembic (DATABASE_URL via env)
+├── data/                    # SQLite DB em produção (volume Docker)
 ├── extractor/
 │   ├── __init__.py          # Orquestração do pipeline: extract_from_pdf()
 │   ├── base.py              # ExtractionResult, helpers (norm, numeros, datas, log)
@@ -61,6 +74,8 @@ extractor-facturas-backend/
 | `requests` | Chamadas síncronas à API Ingebau (extractor/api.py, cups.py) |
 | `httpx` | Chamadas assíncronas ao webhook Zoho Flow (enviar.py) |
 | `python-dotenv` | Carrega variáveis do ficheiro `.env` |
+| `sqlalchemy` | ORM para acesso ao SQLite — sem SQL raw espalhado |
+| `alembic` | Migrações versionadas do schema da base de dados |
 
 **Ferramentas externas (caminhos hardcoded para Windows):**
 - Tesseract OCR: `C:\Program Files\Tesseract-OCR\tesseract.exe`
@@ -82,6 +97,7 @@ FRONTEND_URL=http://localhost:5173
 | `API_TOKEN` | `extractor/api.py`, `api/routes/cups.py` | Autenticação na API Ingebau |
 | `API_URL` | `extractor/api.py`, `api/routes/cups.py` | Endpoint da API Ingebau |
 | `ALLOWED_ORIGINS` | `api/main.py` | Origens CORS permitidas (default: localhost:5173, localhost:3000, amplify) |
+| `DATABASE_URL` | `api/db/database.py` | URL SQLAlchemy. Default: `sqlite:///./sessions.db`. Docker: `sqlite:////app/data/sessions.db` |
 
 > `CALC_BACKEND_URL` foi **removida** — o `/enviar` já não faz forward para backend de cálculo.
 
@@ -101,72 +117,122 @@ Resposta: { "status": "ok", "service": "extractor-facturas" }
 
 ---
 
+### `POST /sesion`
+
+**Propósito:** Cria sessão temporária com payload JSON. Guarda em memória (40min TTL) + SQLite (permanente).
+
+**Request:**
+```
+Content-Type: application/json
+Body: qualquer JSON (cliente, factura, Fsmstate, etc.)
+```
+
+**Resposta (200):**
+```json
+{ "session_id": "550e8400-e29b-41d4-a716-446655440000" }
+```
+
+---
+
+### `GET /sesion/{session_id}`
+
+**Propósito:** Lê sessão. Memória primeiro → fallback SQLite se expirada ou após restart.
+
+**Resposta (200):** payload JSON completo (inclui `facturaPreview` após PATCH do cotizador)
+
+**Erros:** 404 (não encontrada ou expirada sem DB)
+
+---
+
+### `PATCH /sesion/{session_id}`
+
+**Propósito:** Merge parcial do body JSON nos dados existentes. Renova TTL em memória. Persiste no SQLite.
+
+**Request:**
+```json
+{
+  "facturaPreview": { "periodo": "Enero 2025", "dias": 31, ... },
+  "url": "https://master.dsg7um3zm296x.amplifyapp.com/?...&session_id=XXX",
+  "ahorro_anual": 281.24
+}
+```
+
+**Resposta (200):** `{ "ok": true }`
+
+**Erros:** 404 (não encontrada)
+
+---
+
 ### `POST /facturas/extraer`
 
-**Propósito:** Recebe um PDF de fatura elétrica, extrai os campos e devolve os dados estruturados.
+**Propósito:** Recebe PDF de fatura elétrica, extrai campos via pipeline multi-agente Claude, geocodifica endereço de suministro, cria sessão e devolve dados estruturados.
 
 **Request:**
 ```
 Content-Type: multipart/form-data
-Campo: "file" — ficheiro PDF
+Campo: "file" — ficheiro PDF (obrigatório)
+Campo: "data" — JSON opcional: {"cliente": {...}, "ce": {...}, "Fsmstate": "...", "FsmPrevious": "..."}
 ```
 
 **Processamento interno:**
 1. Valida extensão `.pdf`
-2. Guarda PDF num ficheiro temporário
-3. Chama `extract_from_pdf(tmp_path)` — pipeline completo (ver secção Pipeline)
-4. Elimina o ficheiro temporário
-5. Guarda resultado em `resultados/{cups}_{inicio}_{fim}.json`
-6. Devolve `ExtractionResponse`
+2. Chama `extract_with_claude(pdf_bytes)` — pipeline multi-agente (Stage 1 Opus + 4 mappers Sonnet)
+3. Geocodifica `direccion_suministro` via Nominatim → `suministro_lat`, `suministro_lon`
+4. Busca `dealId`/`mpklogId` no Zoho CRM pelo `correo` (se fornecido em `data`)
+5. Cria sessão com payload completo (`factura`, `cliente`, `ce`, `dealId`, `mpklogId`, `extractor_url`)
+6. Guarda JSON local em `resultados/{cups}_{inicio}_{fim}.json`
+7. Upload assíncrono para WorkDrive (non-blocking)
+8. Devolve `ExtractionResponseAI`
 
-**Resposta (200):**
+**Resposta (200) — campos principais:**
 ```json
 {
-  "cups": "ES0021000000000000AA",
-  "periodo_inicio": "01/01/2024",
-  "periodo_fin": "31/01/2024",
-  "comercializadora": "Iberdrola Clientes, S.A.U.",
-  "pp_p1": 0.123456,
-  "pp_p2": 0.067890,
-  "pp_p3": null,
-  "pp_p4": null,
-  "pp_p5": null,
-  "pp_p6": null,
-  "pe_p1": 0.128456,
-  "pe_p2": 0.098234,
-  "pe_p3": 0.076123,
-  "pe_p4": null,
-  "pe_p5": null,
-  "pe_p6": null,
-  "imp_ele": 5.11269,
-  "iva": 21,
-  "alq_eq_dia": 0.052000,
+  "cups": "ES0022000008401855LB1P",
+  "periodo_inicio": "05/10/2025",
+  "periodo_fin": "05/11/2025",
+  "comercializadora": "TotalEnergies Clientes, S.A.U.",
+  "nombre_cliente": "MARIA VANESA SANCHES PEREZ",
+  "direccion_suministro": "CL DAMASO ALONSO 14, 3º, B ILLESCAS - TOLEDO",
+  "suministro_lat": 40.1209488,
+  "suministro_lon": -3.8554211,
+  "pp_p1": 0.103156,
+  "pe_p1": 0.224778,
+  "imp_termino_potencia_eur": 11.03,
+  "imp_termino_energia_eur": 29.67,
+  "imp_impuesto_electrico_eur": 1.99,
+  "imp_alquiler_eur": 0.83,
+  "imp_iva_eur": 8.79,
+  "importe_factura": 59.12,
+  "margen_de_error": 3.16,
+  "IVA": { "IVA_PERCENT_1": 21, "IVA_BASE_IMPONIBLE_1": 41.84, "IVA_SUBTOTAL_EUROS_1": 8.79, "IVA_TOTAL_EUROS": 8.79 },
+  "otros": {
+    "importes_totalizados": { "precio_final_energia_activa": 29.67, "precio_final_potencia": 11.03, "total_factura": 59.12, ... },
+    "costes": { "bono_social_importe": 0.4, "servicio_facilita_importe": 7.02, ... },
+    "creditos": { "descuento_consumo_7": -2.08 },
+    "observacion": ["...raciocínio Claude..."]
+  },
   "tarifa_acceso": "2.0TD",
-  "distribuidora": "Iberdrola Distribución Eléctrica",
-  "pot_p1_kw": 3.3,
-  "pot_p2_kw": 3.3,
-  "pot_p3_kw": 0,
-  "pot_p4_kw": 0,
-  "pot_p5_kw": 0,
-  "pot_p6_kw": 0,
-  "consumo_p1_kwh": 150.0,
-  "consumo_p2_kwh": 80.0,
-  "consumo_p3_kwh": 0,
-  "consumo_p4_kwh": 0,
-  "consumo_p5_kwh": 0,
-  "consumo_p6_kwh": 0,
+  "distribuidora": "UNION FENOSA DISTRIBUCION, S.A.",
+  "pot_p1_kw": 3.45,
+  "consumo_p1_kwh": 132,
   "dias_facturados": "31",
-  "api_ok": true,
-  "api_error": "",
-  "fichero_json": "ES0021000000000000AA_01-01-2024_31-01-2024.json"
+  "session_id": "55c9f4fb-cd2e-4bd3-a73d-ff19c0c5603e"
 }
 ```
 
 **Erros:**
 | Código | Motivo |
 |--------|--------|
-| 400 | Ficheiro não termina em `.pdf` |
+| 400 | Ficheiro não termina em `.pdf` ou `data` não é JSON válido |
+| 502 | Erro na API Claude |
+| 504 | Timeout na API Claude |
 | 500 | Erro interno no processamento |
+
+---
+
+### `POST /facturas/extraer-ai` *(legado)*
+
+Endpoint alternativo — usa `extract_with_claude` directamente (sem pipeline multi-agente). Aplica reconciliação R13 e geocodifica. Preferir `/facturas/extraer` para uso novo.
 
 ---
 
@@ -268,8 +334,12 @@ Campo "data": string JSON com a seguinte estrutura:
 **Processamento interno:**
 1. Faz parse do campo `data` como JSON
 2. Verifica que `cliente` está presente
-3. POST ao webhook Zoho Flow (timeout 30s) com o JSON parsed
-4. Devolve `{"ok": true}`
+3. **Substitui `factura` pela versão Claude da sessão** (se `session_id` presente e sessão existir com `factura`)
+4. Injeta `nombre_cliente`, `direccion_suministro`, `suministro_lat`, `suministro_lon` na `factura` (via `setdefault`)
+5. POST ao webhook Zoho Flow (timeout 30s) com JSON enriquecido
+6. Tenta obter `dealId`/`mpklogId` via `continuar_session_id` (callback Zoho) ou fallback CRM (espera 4s)
+7. Actualiza ou cria sessão com `dealId`/`mpklogId`
+8. Devolve `{"ok": true, "dealId": "...", "mpklogId": "...", "session_id": "..."}`
 
 **Destino do reenvio:**
 ```
@@ -281,7 +351,7 @@ Body: <parsed JSON>
 
 **Resposta (200):**
 ```json
-{ "ok": true }
+{ "ok": true, "dealId": "230641000184606105", "mpklogId": "230641000185853200", "session_id": "..." }
 ```
 
 **Erros:**
@@ -292,7 +362,7 @@ Body: <parsed JSON>
 | 504 | Timeout em Zoho Flow |
 | 502 | Zoho Flow devolveu erro HTTP |
 
-> **Nota:** O campo `file` (PDF) e o forward para `CALC_BACKEND_URL` foram **removidos** nesta versão. O `/enviar` aceita apenas o campo `data` e reenvia ao Zoho.
+> **Nota:** O campo `file` (PDF) e o forward para `CALC_BACKEND_URL` foram **removidos**. O `/enviar` aceita apenas o campo `data`. A `factura` enviada ao Zoho é a versão Claude (com `otros.importes_totalizados`), não a flat do frontend.
 
 ---
 

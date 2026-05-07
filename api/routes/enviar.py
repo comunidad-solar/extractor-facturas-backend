@@ -21,8 +21,6 @@ ZOHO_WEBHOOK = (
 
 router = APIRouter(prefix="/enviar", tags=["enviar"])
 
-ZOHO_CRM_ENABLED = False  # ← False para desativar busca de dealId/mpklogId no Zoho
-
 
 # ---------------------------------------------------------------------------
 # POST /enviar — Zoho Flow (JSON)
@@ -46,7 +44,26 @@ async def enviar_datos(
 
     print(f"[/enviar] Campos recibidos: {list(parsed.keys())}")
 
-    # --- 1. Enviar JSON ao Zoho Flow ---
+    # --- 1. Substituir factura pela versão Claude (da sessão) se disponível ---
+    existing_session_id = parsed.get("session_id")
+    existing_session = leer_sesion(existing_session_id) if existing_session_id else None
+
+    if existing_session and "factura" in existing_session:
+        parsed["factura"] = existing_session["factura"]
+        print(f"[/enviar] factura substituída pela versão Claude (sessão {existing_session_id})")
+    else:
+        factura = dict(parsed.get("factura") or {})
+        factura.pop("archivo", None)
+        factura.pop("api", None)
+        parsed["factura"] = factura
+        print(f"[/enviar] factura obtida do payload do frontend (sem sessão Claude)")
+
+    # Injectar campos de suministro da sessão AI (top-level) se não estiverem na factura
+    for field in ("nombre_cliente", "direccion_suministro", "suministro_lat", "suministro_lon"):
+        if existing_session and existing_session.get(field) is not None:
+            parsed["factura"].setdefault(field, existing_session[field])
+
+    # --- 2. Enviar JSON ao Zoho Flow (com factura Claude) ---
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(ZOHO_WEBHOOK, json=parsed)
@@ -60,46 +77,41 @@ async def enviar_datos(
 
     print(f"[/enviar] Zoho respondió: {resp.status_code}")
 
-    # --- 2. Aguardar o Flow criar o deal ---
-    delay = int(os.getenv("ZOHO_DEAL_FETCH_DELAY", "4"))
-    await asyncio.sleep(delay)
-
-    # --- 3. Buscar dealId e mpklogId em paralelo ---
+    # --- 3. Tentar obter dealId/mpklogId da sessão do /continuar (callback Zoho) ---
     correo = parsed.get("cliente", {}).get("correo", "")
     deal_id = None
     mpklog_id = None
-    if not ZOHO_CRM_ENABLED:
-        print("  ⚠️  ZOHO_CRM_ENABLED=False — busca de dealId/mpklogId desativada")
-    elif correo:
-        deal_id, mpklog_id = await asyncio.gather(
-            buscar_deal_por_email(correo),
-            buscar_mpklog_por_email(correo),
-        )
-        if deal_id:
-            print(f"  ✅  dealId recuperado: {deal_id} ({correo})")
-        else:
-            print(f"  ⚠️  dealId não encontrado para: {correo}")
-        if mpklog_id:
-            print(f"  ✅  mpklogId recuperado: {mpklog_id} ({correo})")
-        else:
-            print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
-    # --- 4. Usar factura extraída por Claude (da sessão) se disponível ---
-    existing_session_id = parsed.get("session_id")
-    existing_session = leer_sesion(existing_session_id) if existing_session_id else None
+    continuar_sid = parsed.get("continuar_session_id")
+    if continuar_sid:
+        continuar_sess = leer_sesion(continuar_sid)
+        if continuar_sess:
+            deal_id   = continuar_sess.get("dealId") or continuar_sess.get("cliente", {}).get("dealId")
+            mpklog_id = continuar_sess.get("mpklogId") or continuar_sess.get("cliente", {}).get("mpklogId")
+            if deal_id:
+                print(f"  ✅  dealId via continuar_session: {deal_id}")
+            if mpklog_id:
+                print(f"  ✅  mpklogId via continuar_session: {mpklog_id}")
 
-    if existing_session and "factura" in existing_session:
-        factura = existing_session["factura"]
-        print(f"[/enviar] factura obtida da sessão Claude ({existing_session_id})")
-    else:
-        # Fallback: usar factura do frontend, removendo campos legados
-        factura = dict(parsed.get("factura") or {})
-        factura.pop("archivo", None)
-        factura.pop("api", None)
-        print(f"[/enviar] factura obtida do payload do frontend (sem sessão prévia)")
+    # --- 3. Fallback: buscar no Zoho CRM se ainda em falta ---
+    if (deal_id is None or mpklog_id is None) and correo:
+        delay = int(os.getenv("ZOHO_DEAL_FETCH_DELAY", "4"))
+        await asyncio.sleep(delay)
+        if deal_id is None:
+            deal_id = await buscar_deal_por_email(correo)
+            if deal_id:
+                print(f"  ✅  dealId recuperado via CRM: {deal_id} ({correo})")
+            else:
+                print(f"  ⚠️  dealId não encontrado para: {correo}")
+        if mpklog_id is None:
+            mpklog_id = await buscar_mpklog_por_email(correo)
+            if mpklog_id:
+                print(f"  ✅  mpklogId recuperado via CRM: {mpklog_id} ({correo})")
+            else:
+                print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
-    # --- 5. Actualizar ou criar sessão ---
-    session_payload = {**parsed, "factura": factura, "dealId": deal_id, "mpklogId": mpklog_id}
+    # --- 4. Actualizar ou criar sessão ---
+    session_payload = {**parsed, "factura": parsed["factura"], "dealId": deal_id, "mpklogId": mpklog_id}
     # Actualizar também dentro de cliente para evitar duplicação
     if "cliente" in session_payload:
         session_payload["cliente"]["dealId"]   = deal_id

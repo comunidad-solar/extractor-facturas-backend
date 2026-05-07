@@ -2,6 +2,167 @@
 
 ---
 
+## 2026-05-07
+
+### [064] `api/utils/geo.py` — módulo partilhado de geocodificação
+**Prompt:** Extrair geocodificação de moradas espanholas para módulo reutilizável (evitar circular import).
+
+**Ficheiros:** `api/utils/__init__.py` (novo), `api/utils/geo.py` (novo)
+
+**Mudança:** `simplify_address()` expande abreviaturas (CL→CALLE, AV→AVENIDA, etc.), remove andar/porta, normaliza separadores, mantém só rua + localidade. `geocode_address()` chama Nominatim async com `countrycodes=es`, timeout 8s.
+
+---
+
+### [063] `api/models.py` — 3 novos campos em `ExtractionResponseAI`
+**Prompt:** Frontend precisa de coordenadas para Haversine; backend precisa de endereço do suministro.
+
+**Ficheiro:** `api/models.py`
+
+**Mudança:** Adicionados `direccion_suministro: Optional[str]`, `suministro_lat: Optional[float]`, `suministro_lon: Optional[float]` a `ExtractionResponseAI`.
+
+---
+
+### [062] Pipeline Claude — extracção de `direccion_suministro`
+**Prompt:** Opus deve extrair endereço do ponto de suministro do PDF da fatura.
+
+**Ficheiros:** `api/claude/raw_prompt.py`, `api/claude/pipeline.py`
+
+**Mudança:** Adicionado `direccion_suministro` ao bloco `meta` do prompt Opus. `_assemble()` em `pipeline.py` extrai o campo de `raw.meta` e passa para `ExtractionResponseAI`.
+
+---
+
+### [061] `/facturas/extraer` — geocodificação + campos suministro na resposta
+**Prompt:** Resposta de extração deve incluir `nombre_cliente`, `direccion_suministro`, `suministro_lat`, `suministro_lon`.
+
+**Ficheiros:** `api/routes/facturas.py`
+
+**Mudança:** Adicionada chamada `await geocode_address(result.direccion_suministro)` após `extract_with_claude()`. `_build_factura_payload()` passa 4 novos campos na sessão. `api/routes/facturas_ai.py` refatorado para usar `api/utils/geo` em vez de código inline.
+
+---
+
+### [060] `/enviar` — factura Claude + campos suministro para Zoho Flow
+**Prompt:** Fix: `/enviar` enviava factura flat do frontend; devia enviar factura rica do Claude (com `otros.importes_totalizados`). Adicionar `nombre_cliente`/`direccion_suministro`/`suministro_lat`/`suministro_lon` ao payload Zoho.
+
+**Ficheiro:** `api/routes/enviar.py`
+
+**Mudança:** Factura substituída pela versão Claude da sessão **antes** do POST ao Zoho Flow. Campos de suministro injetados em `parsed["factura"]` via `setdefault`.
+
+**Antes:** Zoho recebia factura flat (sem `otros.importes_totalizados`, sem campos suministro).
+**Depois:** Zoho recebe factura completa Claude + `nombre_cliente`, `direccion_suministro`, `suministro_lat`, `suministro_lon`.
+
+---
+
+### [059] `Prompt.md` — documentação dos prompts do pipeline multi-agente
+**Prompt:** Criar ficheiro com prompts exactos de todos os agentes antes e depois de alterar `direccion_suministro`.
+
+**Ficheiro:** `Prompt.md` (novo)
+
+**Mudança:** Prompts verbatim do Stage 1 (Opus) + 4 mappers Sonnet (potencia, energia, cargas, costes). Changelog [001] para adição de `direccion_suministro`.
+
+---
+
+## 2026-04-30
+
+### [060] Documentação — CLAUDE.md, BACKEND.md, persistent-sessions.md actualizados
+**Prompt:** Actualizar documentação com sessões persistentes, stack DB, endpoints /sesion, comando deploy EC2.
+
+**Ficheiros:** `CLAUDE.md`, `BACKEND.md`, `docs/persistent-sessions.md`
+
+---
+
+### [059] CORS — `develop.d3rqv6h66vhq03.amplifyapp.com` adicionado às origens permitidas
+**Prompt:** PATCH /sesion a retornar 405 do quoting frontend dev — origem não estava em ALLOWED_ORIGINS.
+
+**Ficheiro:** `api/main.py`
+
+**Mudança:** `develop.d3rqv6h66vhq03.amplifyapp.com` (com e sem `/`) adicionado ao default de `ALLOWED_ORIGINS`.
+
+---
+
+### [058] `sesion.py` — fix parse do body em POST /sesion
+**Prompt:** `body: Any = None` não capturava JSON em FastAPI — sessões ficavam com payload null.
+
+**Ficheiro:** `api/routes/sesion.py`
+
+**Mudança:**
+```python
+# Antes
+async def post_sesion(body: Any = None):
+
+# Depois
+async def post_sesion(request: Request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = None
+```
+
+---
+
+### [057] Docker — volume SQLite para persistência entre redeploys
+**Prompt:** Garantir que sessions.db não se perde em redeploy Docker no EC2.
+
+**Ficheiros:** `docker-compose.yml`, `.gitignore`, `data/.gitkeep`
+
+**Mudança:** `docker-compose.yml` criado com volume `./data:/app/data`. `.gitignore` actualizado para ignorar `data/*.db` e `sessions.db`. Directório `data/` tracked via `.gitkeep`.
+
+**Comando deploy dev EC2:**
+```bash
+docker run ... -v /home/ubuntu/data-dev:/app/data -e DATABASE_URL=sqlite:////app/data/sessions.db extractor-facturas-dev
+```
+
+---
+
+### [056] `api/main.py` — migrações Alembic automáticas no startup
+**Prompt:** Garantir que tabela sessions é criada automaticamente ao arrancar o servidor.
+
+**Ficheiro:** `api/main.py`
+
+**Mudança:** Função `_run_migrations()` chamada antes de `app.add_middleware()`. Usa `alembic_command.upgrade(cfg, "head")` — em redeploys já no head não faz nada.
+
+---
+
+### [055] `api/routes/sesion.py` — persistência dual-layer memória + SQLite
+**Prompt:** Sessões devem sobreviver a restarts e ser recuperáveis de qualquer device via session_id.
+
+**Ficheiro:** `api/routes/sesion.py`
+
+**Mudança:** Substituição completa. `crear_sesion` escreve em `_store` (TTL 40min) + DB (expires_at=NULL). `leer_sesion` lê memória primeiro, fallback DB se expirada — restaura em memória. `actualizar_sesion` actualiza ambos. PATCH endpoint usa `leer_sesion` (com DB fallback). POST /sesion usa `Request` para capturar JSON.
+
+---
+
+### [054] Alembic — migração inicial tabela sessions
+**Prompt:** Criar migração versionada para tabela sessions.
+
+**Ficheiros:** `alembic/versions/787deedd37e0_create_sessions_table.py`
+
+**Mudança:** Tabela `sessions` com colunas: `session_id` (TEXT PK), `payload` (TEXT), `url` (TEXT nullable), `created_at` (DATETIME), `expires_at` (DATETIME nullable). Index em `session_id`.
+
+---
+
+### [053] Alembic — configuração inicial
+**Prompt:** Configurar Alembic para migrações do SQLite com DATABASE_URL via env.
+
+**Ficheiros:** `alembic.ini`, `alembic/env.py`, `alembic/script.py.mako`
+
+**Mudança:** `alembic init alembic`. `env.py` substituído para usar `DATABASE_URL` do env, importar `Base` e `api.db.models`. `sqlalchemy.url` em `alembic.ini` deixado vazio (lido do env).
+
+---
+
+### [052] `api/db/` — pacote SQLAlchemy ORM para persistência de sessões
+**Prompt:** Implementar camada de persistência SQLite com SQLAlchemy + Alembic para sessões.
+
+**Ficheiros:** `api/db/__init__.py`, `api/db/database.py`, `api/db/models.py`, `api/db/repository.py`, `requirements.txt`, `.env.example`
+
+**Mudança:**
+- `database.py`: engine com `DATABASE_URL` do env (default `sqlite:///./sessions.db`), `SessionLocal`, `Base(DeclarativeBase)`
+- `models.py`: `SessionRecord` com `session_id` PK, `payload` TEXT, `url` TEXT, `created_at` `DateTime(timezone=True)`, `expires_at` nullable
+- `repository.py`: `db_save_session` (get+add pattern), `db_get_session` (com lazy delete de expirados), `db_update_session` — único lugar com lógica DB
+- `requirements.txt`: `sqlalchemy`, `alembic` adicionados
+- `.env.example`: `DATABASE_URL` documentado com path Docker e local dev
+
+---
+
 ## 2026-04-17
 
 ### [051] Campo `advertencia_ano` renomeado e convertido para booleano

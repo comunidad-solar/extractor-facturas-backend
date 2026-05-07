@@ -9,11 +9,13 @@ import os
 from typing import Optional
 
 import anthropic
-from fastapi import APIRouter, Form, UploadFile, File, HTTPException
+import httpx
+from fastapi import APIRouter, Form, UploadFile, File, HTTPException, Request
 
 from api.claude.extractor import extract_with_claude
 from api.models import ExtractionResponseAI
 from api.routes.sesion import crear_sesion
+from api.utils.geo import simplify_address, geocode_address
 from api.zoho_crm import buscar_deal_por_email, buscar_mpklog_por_email
 from api.zoho_workdrive import upload_factura_files
 
@@ -163,6 +165,12 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
 
         # ── Validação de cuadre ───────────────────────────────────────────────
         "margen_de_error": result.margen_de_error,
+
+        # ── Dados do titular e ponto de suministro ────────────────────────────
+        "nombre_cliente":        result.nombre_cliente,
+        "direccion_suministro":  result.direccion_suministro,
+        "suministro_lat":        result.suministro_lat,
+        "suministro_lon":        result.suministro_lon,
     }
 
 
@@ -368,6 +376,7 @@ def _log_cuadre(result: ExtractionResponseAI) -> None:
 @router.post("/extraer", response_model=ExtractionResponseAI,
              response_model_exclude=_EXCLUDE)
 async def extraer_factura(
+    request: Request,
     file: UploadFile = File(...),
     data: Optional[str] = Form(None, description='JSON: {"cliente": {...}, "ce": {...}, "Fsmstate": "...", "FsmPrevious": "..."}'),
 ):
@@ -410,6 +419,14 @@ async def extraer_factura(
 
     # _log_cuadre(result)
 
+    # Geocodificar direccion_suministro via Nominatim
+    if result.direccion_suministro:
+        result.suministro_lat, result.suministro_lon = await geocode_address(result.direccion_suministro)
+        if result.suministro_lat:
+            print(f"  ✅  suministro geocodificado: {result.suministro_lat},{result.suministro_lon}")
+        else:
+            print(f"  ⚠️  geocodificação fallida para: {result.direccion_suministro}")
+
     # Advertencia si la factura es anterior a 2025
     _ano_factura = None
     _fecha_ref = result.periodo_fin or result.periodo_inicio
@@ -442,12 +459,21 @@ async def extraer_factura(
         extra["cliente"]["dealId"]   = deal_id
         extra["cliente"]["mpklogId"] = mpklog_id
 
+    # Extractor URL baseada na origem do pedido
+    _origin = request.headers.get("origin", "")
+    _extractor_url = (
+        "https://extractor-dev.13.38.9.119.nip.io"
+        if "develop.dsg7um3zm296x.amplifyapp.com" in _origin
+        else "https://extractor.13.38.9.119.nip.io"
+    )
+
     # Construir payload completo para la sesión
     session_payload = {
         **extra,                             # cliente, ce, Fsmstate, FsmPrevious, ...
-        "factura":  _build_factura_payload(result),
-        "dealId":   deal_id,
-        "mpklogId": mpklog_id,
+        "factura":       _build_factura_payload(result),
+        "dealId":        deal_id,
+        "mpklogId":      mpklog_id,
+        "extractor_url": _extractor_url,
     }
 
     result.session_id = crear_sesion(session_payload)
