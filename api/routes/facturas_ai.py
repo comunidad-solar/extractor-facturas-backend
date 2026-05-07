@@ -12,6 +12,7 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from api.claude.extractor import extract_with_claude
 from api.models import ExtractionResponseAI, ValidacionCuadre
 from api.routes.sesion import crear_sesion
+from api.utils.geo import geocode_address
 
 router = APIRouter(prefix="/facturas", tags=["facturas"])
 
@@ -91,6 +92,12 @@ async def extraer_factura_ai(request: Request, file: UploadFile = File(...)):
 
     # Reconciliación contable R13
     result.validacion_cuadre = _calc_validacion_cuadre(result)
+
+    # Geocodificar direccion_suministro via Nominatim
+    if result.direccion_suministro:
+        result.suministro_lat, result.suministro_lon = await geocode_address(result.direccion_suministro)
+        if result.suministro_lat:
+            print(f"[extraer-ai] ✅ geocodificado: {result.suministro_lat},{result.suministro_lon}")
 
     # Extractor URL baseada na origem do pedido
     _origin = request.headers.get("origin", "")

@@ -9,11 +9,13 @@ import os
 from typing import Optional
 
 import anthropic
+import httpx
 from fastapi import APIRouter, Form, UploadFile, File, HTTPException, Request
 
 from api.claude.extractor import extract_with_claude
 from api.models import ExtractionResponseAI
 from api.routes.sesion import crear_sesion
+from api.utils.geo import simplify_address, geocode_address
 from api.zoho_crm import buscar_deal_por_email, buscar_mpklog_por_email
 from api.zoho_workdrive import upload_factura_files
 
@@ -161,6 +163,12 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
 
         # ── Validação de cuadre ───────────────────────────────────────────────
         "margen_de_error": result.margen_de_error,
+
+        # ── Dados do titular e ponto de suministro ────────────────────────────
+        "nombre_cliente":        result.nombre_cliente,
+        "direccion_suministro":  result.direccion_suministro,
+        "suministro_lat":        result.suministro_lat,
+        "suministro_lon":        result.suministro_lon,
     }
 
 
@@ -408,6 +416,14 @@ async def extraer_factura(
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
 
     # _log_cuadre(result)
+
+    # Geocodificar direccion_suministro via Nominatim
+    if result.direccion_suministro:
+        result.suministro_lat, result.suministro_lon = await geocode_address(result.direccion_suministro)
+        if result.suministro_lat:
+            print(f"  ✅  suministro geocodificado: {result.suministro_lat},{result.suministro_lon}")
+        else:
+            print(f"  ⚠️  geocodificação fallida para: {result.direccion_suministro}")
 
     # Advertencia si la factura es anterior a 2025
     _ano_factura = None
