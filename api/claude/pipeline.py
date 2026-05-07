@@ -106,6 +106,7 @@ def _assemble(raw: dict, mapped: dict) -> ExtractionResponseAI:
     periodo_fin = meta.get("periodo_fin")
     dias_facturados = str(meta.get("dias_facturados", "")) or None
     nombre_cliente = meta.get("nombre_cliente")
+    direccion_suministro = meta.get("direccion_suministro")
     importe_factura = meta.get("importe_factura")
 
     # Potencias contratadas
@@ -223,6 +224,7 @@ def _assemble(raw: dict, mapped: dict) -> ExtractionResponseAI:
         periodo_fin=periodo_fin,
         dias_facturados=dias_facturados,
         nombre_cliente=nombre_cliente,
+        direccion_suministro=direccion_suministro,
         importe_factura=importe_factura,
         # Potencias contratadas
         pot_p1_kw=pc.get("P1"), pot_p2_kw=pc.get("P2"), pot_p3_kw=pc.get("P3"),

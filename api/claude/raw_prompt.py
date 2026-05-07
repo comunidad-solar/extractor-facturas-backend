@@ -21,7 +21,8 @@ RAW_SYSTEM_PROMPT = (
     '    "dias_facturados": <int>,\n'
     '    "nombre_cliente": <string>,\n'
     '    "importe_factura": <float>,\n'
-    '    "numero_factura": <string o null>\n'
+    '    "numero_factura": <string o null>,\n'
+    '    "direccion_suministro": <string — dirección completa del punto de suministro (CUPS), tal como aparece en la factura. null si no está explícita>\n'
     "  },\n"
     '  "termino_potencia": {\n'
     '    "formula_detectada": <string — ej: "kW × precio × (dias/365)" o "kW × precio × dias">,\n'

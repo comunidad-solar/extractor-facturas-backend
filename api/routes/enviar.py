@@ -58,6 +58,11 @@ async def enviar_datos(
         parsed["factura"] = factura
         print(f"[/enviar] factura obtida do payload do frontend (sem sessão Claude)")
 
+    # Injectar campos de suministro da sessão AI (top-level) se não estiverem na factura
+    for field in ("nombre_cliente", "direccion_suministro", "suministro_lat", "suministro_lon"):
+        if existing_session and existing_session.get(field) is not None:
+            parsed["factura"].setdefault(field, existing_session[field])
+
     # --- 2. Enviar JSON ao Zoho Flow (com factura Claude) ---
     try:
         async with httpx.AsyncClient(timeout=30) as client:
