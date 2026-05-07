@@ -15,13 +15,17 @@ Sistema Python para extrair campos-chave de faturas de eletricidade espanholas e
 extractor-facturas-backend/
 ├── api/
 │   ├── main.py              # FastAPI app, CORS, migrações Alembic no startup, registo de routers
-│   ├── models.py            # Schemas Pydantic (ExtractionResponse)
+│   ├── models.py            # Schemas Pydantic (ExtractionResponse, ExtractionResponseAI)
 │   ├── db/
 │   │   ├── database.py      # Engine SQLAlchemy, SessionLocal, Base, DATABASE_URL
 │   │   ├── models.py        # ORM model SessionRecord (tabela sessions)
 │   │   └── repository.py    # db_save_session, db_get_session, db_update_session
+│   ├── utils/
+│   │   ├── __init__.py      # pacote utils
+│   │   └── geo.py           # simplify_address(), geocode_address() via Nominatim
 │   └── routes/
-│       ├── facturas.py      # POST /facturas/extraer
+│       ├── facturas.py      # POST /facturas/extraer (pipeline multi-agente Claude — principal)
+│       ├── facturas_ai.py   # POST /facturas/extraer-ai (legado — Claude direto)
 │       ├── cups.py          # GET /cups/consultar
 │       ├── enviar.py        # POST /enviar (proxy Zoho Flow)
 │       └── sesion.py        # POST/GET/PATCH /sesion — memória + SQLite
@@ -121,11 +125,16 @@ FRONTEND_URL=http://localhost:5173
 
 ## Endpoints da API
 
-### `POST /facturas/extraer`
-- Upload de ficheiro PDF
-- Devolve `ExtractionResponse` com 27 campos extraídos
-- Guarda JSON em `/resultados/{cups}_{periodo}.json`
-- Erros: 400 (não é PDF), 500 (erro de processamento)
+### `POST /facturas/extraer` *(principal)*
+- Upload de ficheiro PDF + `data` JSON opcional (cliente, ce, Fsmstate)
+- Pipeline multi-agente Claude: Stage 1 Opus (transcrição) + 4 mappers Sonnet (potencia, energia, cargas, costes)
+- Geocodifica `direccion_suministro` via Nominatim → `suministro_lat`, `suministro_lon`
+- Busca `dealId`/`mpklogId` no Zoho CRM pelo `correo`
+- Devolve `ExtractionResponseAI` com `nombre_cliente`, `direccion_suministro`, `suministro_lat`, `suministro_lon`, `session_id`
+- Erros: 400, 502, 504, 500
+
+### `POST /facturas/extraer-ai` *(legado)*
+- Claude direto (sem pipeline multi-agente); mantido para backward compat
 
 ### `GET /cups/consultar?cups={cups}`
 - Consulta dados do ponto de fornecimento via API Ingebau
@@ -134,10 +143,11 @@ FRONTEND_URL=http://localhost:5173
 
 ### `POST /enviar`
 - Proxy para webhook Zoho Flow
-- Body: campo `data` (Form) com JSON `{cliente, factura, Fsmstate, FsmPrevious, ce}`
+- Body: campo `data` (Form) com JSON `{cliente, factura, session_id, Fsmstate, FsmPrevious, ce}`
+- **Substitui `factura` pela versão Claude da sessão** (se `session_id` presente)
+- **Injeta `nombre_cliente`, `direccion_suministro`, `suministro_lat`, `suministro_lon`** na factura
 - **Não aceita ficheiro PDF** (campo `file` foi removido)
-- **Não faz forward para `CALC_BACKEND_URL`** (removido)
-- Devolve: `{"ok": true}`
+- Devolve: `{"ok": true, "dealId": "...", "mpklogId": "...", "session_id": "..."}`
 
 ### `POST /sesion`
 - Cria sessão temporária com payload JSON arbitrário
@@ -229,6 +239,7 @@ Os campos base estão definidos em `extractor/fields.py`. O schema completo da r
 
 - **API Ingebau** (`http://13.39.57.137:8004/Cups`) — dados de ponto de fornecimento e histórico de consumos. Tolerância de 15 dias no matching de períodos.
 - **Zoho Flow Webhook** — integração downstream para automação de processos
+- **Nominatim (OpenStreetMap)** (`https://nominatim.openstreetmap.org/search`) — geocodificação de endereços espanhóis. Requer `simplify_address()` antes da chamada; User-Agent `ComunidadSolar/1.0`. Veja `api/utils/geo.py`.
 
 ---
 
@@ -260,6 +271,8 @@ O `log.md` é o histórico de decisões do projecto — manter conciso mas compl
 - O `.gitignore` ignora `*.md` — o CLAUDE.md, BACKEND.md e FRONTEND.md devem ser excecionados se se quiser fazer commit.
 - Não há testes automatizados — ao adicionar funcionalidade nova, testar manualmente via Swagger UI ou GUI.
 - Ao adicionar suporte a nova comercializadora: criar ficheiro em `extractor/parsers/`, registar em `extractor/parsers/__init__.py`, e adicionar padrão de deteção em `extractor/detector.py`.
-- O `/enviar` aceita apenas o campo `data` (Form) — o campo `file` e o forward para `CALC_BACKEND_URL` foram removidos.
+- O `/enviar` aceita apenas o campo `data` (Form) — o campo `file` e o forward para `CALC_BACKEND_URL` foram removidos. A `factura` enviada ao Zoho é a versão Claude da sessão (com `otros.importes_totalizados`), não a flat do frontend.
+- **Geocodificação** — `api/utils/geo.py` contém `simplify_address()` e `geocode_address()`. Nunca duplicar inline — usar sempre o módulo partilhado. Endereços crus falham no Nominatim; `simplify_address()` é obrigatório.
+- **`/facturas/extraer` é o endpoint principal** — `facturas_ai.py` é legado. Novas features vão em `facturas.py`.
 - **Sessões persistem em SQLite** (`api/db/`). Alembic corre migrações automaticamente no startup. Em Docker, o DB fica em `/app/data/sessions.db` (volume `-v /home/ubuntu/data-dev:/app/data`). Sem volume → DB perde-se no redeploy.
 - **Deploy dev EC2:** `cd /home/ubuntu/extractor-facturas-backend && git pull origin DEVELOP && docker stop extractor-facturas-dev && docker rm extractor-facturas-dev && docker build -t extractor-facturas-dev . && mkdir -p /home/ubuntu/data-dev && docker run -d --name extractor-facturas-dev --env-file .env.development -p 8011:8000 --restart always -v /home/ubuntu/data-dev:/app/data -e DATABASE_URL=sqlite:////app/data/sessions.db extractor-facturas-dev`
