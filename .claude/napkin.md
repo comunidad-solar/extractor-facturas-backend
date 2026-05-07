@@ -48,6 +48,15 @@
 7. **[2026-05-06] SQLite data lost in Docker without volume**
    Do instead: always mount `/home/ubuntu/data-dev:/app/data` in docker run; verify volume exists before deploy.
 
+8. **[2026-05-07] `/enviar` sends Claude factura (from session), not flat frontend factura**
+   Do instead: frontend must pass `session_id` in payload; backend reads Claude session factura before posting to Zoho. Do not change this flow — Zoho expects `otros.importes_totalizados`.
+
+9. **[2026-05-07] Nominatim fails on raw Spanish addresses — simplify first**
+   Do instead: always run `simplify_address()` before Nominatim call. Raw "CL DAMASO ALONSO 14, 3º, B ILLESCAS - TOLEDO" → no hits. Simplified "CALLE DAMASO ALONSO ILLESCAS TOLEDO" → resolves. Logic in `api/utils/geo.py`.
+
+10. **[2026-05-07] Shared geocoding utility — never inline**
+    Do instead: use `from api.utils.geo import simplify_address, geocode_address`. Never duplicate in route files — caused circular import when `facturas_ai.py` tried to import from `facturas.py`.
+
 ## User Directives
 
 1. **[2026-05-06] Tesseract + Poppler paths are Windows-hardcoded**
@@ -55,3 +64,6 @@
 
 2. **[2026-05-06] `resultados/` and `*.md` ignored by .gitignore**
    Do instead: if CLAUDE.md/BACKEND.md/FRONTEND.md need committing, add exceptions to `.gitignore` explicitly.
+
+3. **[2026-05-07] `/facturas/extraer` is the main endpoint — `/facturas/extraer-ai` is legacy**
+   Do instead: direct new features and fixes to `api/routes/facturas.py`. `facturas_ai.py` kept for backward compat only.
