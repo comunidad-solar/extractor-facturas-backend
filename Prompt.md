@@ -268,8 +268,11 @@ REGLAS:
 
 BONO SOCIAL:
   bono_social_importe: suma total del período (sumar todos los tramos si hay varios).
-  bono_social_precio_dia: si hay un único tramo → precio_dia de ese tramo.
-    Si hay múltiples tramos → media ponderada: Σ(dias_i × precio_dia_i) / Σ(dias_i).
+  bono_social_precio_dia: precio expresado en EUR/DÍA.
+    - Si la factura muestra €/día → usar directamente.
+    - Si la factura muestra €/año (ej: "4,650987 €/año") → dividir entre 365.
+    - Si hay múltiples tramos → media ponderada: Σ(dias_i × precio_dia_i) / Σ(dias_i).
+    Verificación: bono_social_precio_dia × dias_periodo ≈ bono_social_importe.
   Si no hay bono social → ambos null.
 
 ALQUILER DE EQUIPOS:
@@ -314,6 +317,38 @@ Nota: "costes_adicionales" y "creditos" pueden ser {} si no hay ninguno.
 ---
 
 ## Alterações
+
+### [002] 2026-05-07 — `bono_social_precio_dia` em €/día (divisão por 365 quando €/año)
+
+**Motivação:** Facturas TotalEnergies (e outras) expressam o Bono Social em €/año
+(ex: `4,650987 €/año × 31/365 días`). O mapper devolvia o valor anual bruto,
+causando `bono_social: 4.650987` em vez de `0.012879` €/día.
+
+**Ficheiro alterado:** `api/claude/mappers/costes.py`
+
+**Diff da regra BONO SOCIAL:**
+
+Antes:
+```
+bono_social_precio_dia: si hay un único tramo → precio_dia de ese tramo.
+  Si hay múltiples tramos → media ponderada: Σ(dias_i × precio_dia_i) / Σ(dias_i).
+```
+
+Depois:
+```
+bono_social_precio_dia: precio expresado en EUR/DÍA.
+  - Si la factura muestra €/día → usar directamente.
+  - Si la factura muestra €/año (ej: "4,650987 €/año") → dividir entre 365.
+  - Si hay múltiples tramos → media ponderada: Σ(dias_i × precio_dia_i) / Σ(dias_i).
+  Verificación: bono_social_precio_dia × dias_periodo ≈ bono_social_importe.
+```
+
+**Exemplo validado (TotalEnergies 2.0TD):**
+- Fatura: `4,650987 €/año × 31/365 = 0,40 €`
+- Antes: `bono_social: 4.650987` ✗
+- Depois: `bono_social: 0.012879` (= 4.650987 / 365) ✓ → 0.012879 × 31 = 0.399 ≈ 0.40 €
+
+---
 
 ### [001] 2026-05-06 — Adicionar `direccion_suministro` + geocodificação
 
