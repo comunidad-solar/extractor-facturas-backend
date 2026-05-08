@@ -10,8 +10,11 @@ REGLAS:
 
 BONO SOCIAL:
   bono_social_importe: suma total del período (sumar todos los tramos si hay varios).
-  bono_social_precio_dia: si hay un único tramo → precio_dia de ese tramo.
-    Si hay múltiples tramos → media ponderada: Σ(dias_i × precio_dia_i) / Σ(dias_i).
+  bono_social_precio_dia: precio expresado en EUR/DÍA.
+    - Si la factura muestra €/día → usar directamente.
+    - Si la factura muestra €/año (ej: "4,650987 €/año") → dividir entre 365.
+    - Si hay múltiples tramos → media ponderada: Σ(dias_i × precio_dia_i) / Σ(dias_i).
+    Verificación: bono_social_precio_dia × dias_periodo ≈ bono_social_importe.
   Si no hay bono social → ambos null.
 
 ALQUILER DE EQUIPOS:
