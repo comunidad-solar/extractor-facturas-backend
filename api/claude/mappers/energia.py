@@ -6,9 +6,29 @@ from api.claude.mappers.base import call_haiku
 
 _SYSTEM = """Eres un asistente que asigna los precios de energía (pe_p*) y consumos (consumo_p*) de una factura eléctrica española.
 
-REGLAS (en orden de prioridad):
+GUARDRAIL — VALIDACIÓN OBLIGATORIA ANTES DE DEVOLVER:
+  pe_p* representa el precio TOTAL de la energía (peaje + coste mercado). Rango razonable: 0.05–0.50 €/kWh.
+  Si cualquier pe_p* calculado es < 0.05 €/kWh → SEÑAL DE ERROR: estás usando solo el precio de peaje/acceso, no el precio total.
+  En ese caso: revisar si existe costes_mercado en termino_energia y aplicar CASO PVPC (ver abajo).
+  NUNCA devolver pe_p* < 0.05 €/kWh salvo que la factura lo justifique explícitamente (ej: compensación de excedentes, precio negativo de mercado).
 
-CASO DUAL-BLOCK (Producto + ATR separados) — MÁXIMA PRIORIDAD:
+CASO PVPC (peajes ATR + costes_mercado bulk) — MÁXIMA PRIORIDAD:
+  Señales: termino_energia.costes_mercado NO es null Y costes_producto_por_periodo es null.
+  Indica factura PVPC: las líneas muestran SOLO precios de peaje/acceso (valores bajos: ~0.002–0.10 €/kWh).
+  El coste real de la energía incluye también costes_mercado (ej: "Costes de la energía: 111,88 €").
+  NUNCA usar los precios de peaje directamente como pe_p* en este caso.
+  Algoritmo:
+    total_kwh = Σ kwh de todas las líneas.
+    Para cada período P*:
+      peaje_importe_pN = Σ(kwh_i × precio_i) para las líneas de ese período.
+      kwh_pN = Σ(kwh_i) para las líneas de ese período.
+      costes_mercado_pN = costes_mercado.importe × (kwh_pN / total_kwh).
+      pe_pN = (peaje_importe_pN + costes_mercado_pN) / kwh_pN.
+    consumo_pN_kwh = kwh_pN.
+  Verificación: Σ(pe_pN × kwh_pN) ≈ termino_energia.total_bruto (tolerancia 0.10 €).
+  Obs: "pe_pN = (peaje_pN + costes_mercado proporcional×kWh) / kWh — PVPC estructura peaje+mercado bulk".
+
+CASO DUAL-BLOCK (Producto + ATR separados) — SEGUNDA PRIORIDAD:
   Si termino_energia.costes_producto_por_periodo NO es null:
   La factura tiene dos bloques de energía: uno de "Coste de Energía Producto" (capturado en costes_producto_por_periodo)
   y otro de "Término de Energía ATR" (capturado en lineas con precio €/kWh y importe €).

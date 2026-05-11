@@ -71,8 +71,14 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
         if v is not None:
             importes_totalizados.setdefault(k, v)
 
-    # Só os costes estruturais vão para importes_totalizados (não serviços dinâmicos)
-    _COSTES_ESTRUTURAIS = {"alquiler_equipos_medida_importe", "exceso_potencia_importe", "coste_energia_reactiva"}
+    # Costes estruturais: vão para importes_totalizados como campo nomeado (não somados em costes_totales)
+    # minimo_comunitario_importe é carga regulatória, não serviço dinâmico → também estrutural
+    _COSTES_ESTRUTURAIS = {
+        "alquiler_equipos_medida_importe",
+        "exceso_potencia_importe",
+        "coste_energia_reactiva",
+        "minimo_comunitario_importe",
+    }
     for k, v in costes.items():
         if k in _COSTES_ESTRUTURAIS and v is not None:
             importes_totalizados.setdefault(k, v)
@@ -86,8 +92,11 @@ def _build_factura_payload(result: ExtractionResponseAI) -> dict:
     if bono_social_importe is not None:
         importes_totalizados.setdefault("bono_social_importe", bono_social_importe)
 
-    # Totais agregados
-    costes_totales   = round(sum(v for v in costes.values()   if isinstance(v, (int, float)) and v is not None), 2)
+    # costes_totales = só serviços dinâmicos (facilita, pack hogar, etc.)
+    # exclui estruturais (já estão em importes_totalizados como campos nomeados)
+    costes_totales   = round(sum(v for k, v in costes.items()
+                                 if k not in _COSTES_ESTRUTURAIS
+                                 and isinstance(v, (int, float)) and v is not None), 2)
     creditos_totales = round(sum(v for v in creditos.values() if isinstance(v, (int, float)) and v is not None), 2)
     importes_totalizados["costes_totales"]   = costes_totales
     importes_totalizados["creditos_totales"] = creditos_totales

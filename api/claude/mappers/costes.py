@@ -32,6 +32,23 @@ SERVICIOS ADICIONALES (Pack Hogar, Asistente Smart Hogar, Servicio FACILITA, etc
   Si no tiene descuento: solo en costes_adicionales.
   Clave: usar snake_case del nombre descriptivo + "_importe" (ej: "asistente_smart_hogar_importe").
 
+AUTOCONSUMO — COMPENSACIÓN DE EXCEDENTES Y BATERÍA VIRTUAL:
+  Si la factura tiene líneas de autoconsumo (excedentes, batería virtual):
+    "Valoración excedentes": importe negativo (ej: -46.02 €).
+    "Importe a cargar en la Batería Virtual": importe positivo (ej: +12.04 €) — reduce la compensación.
+    "Subtotal Compensación Excedentes": el NETO = valoración + batería (ej: -33.98 €).
+  REGLA: poner SOLO el neto en creditos["compensacion_excedentes_importe"].
+    creditos["compensacion_excedentes_importe"] = Subtotal Compensación Excedentes (negativo).
+  NUNCA poner valoración + subtotal juntos (doble conteo).
+  NUNCA poner "importe_bateria_virtual" en creditos.
+  Si no hay subtotal explícito → usar valoración directamente.
+  Clave obligatoria: "compensacion_excedentes_importe" (no renombrar).
+
+CARGO MÍNIMO COMUNITARIO (Art. 99.2 Ley 38/1992):
+  Es un cargo regulatorio sobre el consumo, NO un servicio adicional.
+  Va en costes_adicionales["minimo_comunitario_importe"] = <float positivo>.
+  Señal: línea "Mínimo comunitario X kWh × 0,001000 €/kWh".
+
 DESCUENTOS SOBRE CONSUMO (ej: Descuento 15%):
   Van en creditos con valor negativo.
   Clave descriptiva snake_case (ej: "descuento_consumo_15": -6.74).
