@@ -298,8 +298,6 @@ def _calc_margen(
 
         # Add creditos (negative values)
         for key, val in (creditos_block or {}).items():
-            if key == "compensacion_excedentes_importe":
-                continue
             if isinstance(val, (int, float)) and val < 0:
                 suma += val
 
