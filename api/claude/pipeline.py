@@ -114,9 +114,9 @@ def _assemble(raw: dict, mapped: dict) -> ExtractionResponseAI:
 
     # Impuestos
     imp = raw.get("impuestos", {})
-    iee = imp.get("iee", {})
+    iee = imp.get("iee") or {}
     imp_ele = iee.get("porcentaje")
-    iva_lines = imp.get("iva", [])
+    iva_lines = imp.get("iva") or []
     iva_pct = iva_lines[0].get("porcentaje") if iva_lines else None
 
     # IVA block
