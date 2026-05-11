@@ -21,6 +21,8 @@ from api.zoho_workdrive import upload_factura_files
 
 router = APIRouter(prefix="/facturas", tags=["facturas"])
 
+ZOHO_CRM_ENABLED = False  # ← False para desativar busca de dealId/mpklogId no Zoho
+
 RESULTADOS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "resultados")
 os.makedirs(RESULTADOS_DIR, exist_ok=True)
 
@@ -399,20 +401,46 @@ async def extraer_factura(
 
     pdf_bytes = await file.read()
 
+    _nomedopdf_err = os.path.splitext(file.filename)[0]
+
     try:
         result = extract_with_claude(pdf_bytes)
     except anthropic.APIStatusError as e:
+        import traceback as _tb
         msg = str(e).encode("ascii", "replace").decode("ascii")
         print(f"  [ERROR]  APIStatusError {e.status_code}: {msg}")
+        asyncio.create_task(upload_factura_files(
+            nomedopdf=_nomedopdf_err, tarifa_acceso="sin_tarifa",
+            pdf_bytes=pdf_bytes, result=None, session_payload={},
+            is_error=True, error_msg=f"APIStatusError {e.status_code}: {msg}",
+            error_traceback=_tb.format_exc(),
+        ))
         raise HTTPException(status_code=502, detail=f"Error de la API de Claude ({e.status_code}): {e}")
     except anthropic.APITimeoutError:
+        import traceback as _tb
         print("  [ERROR]  APITimeoutError")
+        asyncio.create_task(upload_factura_files(
+            nomedopdf=_nomedopdf_err, tarifa_acceso="sin_tarifa",
+            pdf_bytes=pdf_bytes, result=None, session_payload={},
+            is_error=True, error_msg="APITimeoutError",
+            error_traceback=_tb.format_exc(),
+        ))
         raise HTTPException(status_code=504, detail="Timeout llamando a la API de Claude.")
     except Exception as e:
-        import traceback
+        import traceback as _tb
         msg = str(e).encode("ascii", "replace").decode("ascii")
         print(f"  [ERROR]  Error inesperado: {msg}")
-        traceback.print_exc()
+        _tb.print_exc()
+        asyncio.create_task(upload_factura_files(
+            nomedopdf=_nomedopdf_err, tarifa_acceso="sin_tarifa",
+            pdf_bytes=pdf_bytes, result=None, session_payload={},
+            is_error=True, error_msg=msg,
+            error_traceback=_tb.format_exc(),
+            partial_data={
+                "raw":    getattr(e, "raw_data",    None),
+                "mapped": getattr(e, "mapped_data", None),
+            },
+        ))
         raise HTTPException(status_code=500, detail=f"Error procesando el PDF: {e}")
 
     # _log_cuadre(result)
@@ -440,7 +468,9 @@ async def extraer_factura(
 
     # Buscar dealId y mpklogId en Zoho CRM si hay correo
     deal_id, mpklog_id = None, None
-    if correo:
+    if not ZOHO_CRM_ENABLED:
+        print("  ⚠️  ZOHO_CRM_ENABLED=False — busca de dealId/mpklogId desativada")
+    elif correo:
         deal_id, mpklog_id = await asyncio.gather(
             buscar_deal_por_email(correo),
             buscar_mpklog_por_email(correo),
@@ -486,7 +516,7 @@ async def extraer_factura(
     print(f"  ✅  JSON local guardado: resultados/{nombre}")
 
     # WorkDrive upload (non-blocking)
-    _nomedopdf = os.path.splitext(file.filename)[0]
+    _nomedopdf = _nomedopdf_err  # já calculado antes do try
     _tarifa    = result.tarifa_acceso or "sin_tarifa"
     print(f"  ⏳  WorkDrive: agendando upload para '{_nomedopdf}_{_tarifa}/'...")
     asyncio.create_task(

@@ -132,43 +132,61 @@ async def upload_factura_files(
     nomedopdf:       str,
     tarifa_acceso:   str,
     pdf_bytes:       bytes,
-    result:          ExtractionResponseAI,
+    result:          ExtractionResponseAI | None,
     session_payload: dict,
     session_id:      str | None = None,
+    is_error:        bool = False,
+    error_msg:       str | None = None,
+    error_traceback: str | None = None,
+    partial_data:    dict | None = None,
 ) -> None:
     """
     Cria subpasta {nomedopdf}_{tarifa_acceso} dentro de ZOHO_WORKDRIVE_FOLDER_ID
-    e faz upload dos 4 ficheiros. Nunca lança excepção — erros são apenas logados.
+    e faz upload dos ficheiros. Nunca lança excepção — erros são apenas logados.
     Se ZOHO_WORKDRIVE_FOLDER_ID não estiver definido, retorna silenciosamente.
+    Se is_error=True, usa prefixo ERROR_ e inclui error_report.json em vez dos JSON Claude.
     """
     folder_id = os.getenv("ZOHO_WORKDRIVE_FOLDER_ID", "").strip()
     if not folder_id:
         return
 
     files: list[tuple[str, bytes]] = [
-        (
-            f"{nomedopdf}.pdf",
-            pdf_bytes,
-        ),
-        (
-            f"{nomedopdf}_claudeDatosBrutos.json",
-            json.dumps(
-                result.model_dump(exclude=_EXCLUDE_FIELDS),
-                ensure_ascii=False, indent=2,
-            ).encode("utf-8"),
-        ),
-        (
-            f"{nomedopdf}_claudeDatosTratados.json",
-            json.dumps(
-                session_payload.get("factura", {}),
-                ensure_ascii=False, indent=2,
-            ).encode("utf-8"),
-        ),
-        (
-            f"{nomedopdf}_datosEnviadosalCotizador.json",
-            json.dumps(session_payload, ensure_ascii=False, indent=2).encode("utf-8"),
-        ),
+        (f"{nomedopdf}.pdf", pdf_bytes),
     ]
+
+    if is_error:
+        error_doc = {
+            "error":        error_msg or "Unknown error",
+            "traceback":    error_traceback,
+            "filename":     f"{nomedopdf}.pdf",
+            "partial_data": partial_data,
+        }
+        files.append((
+            f"{nomedopdf}_ERROR.json",
+            json.dumps(error_doc, ensure_ascii=False, indent=2).encode("utf-8"),
+        ))
+
+    if result is not None:
+        files += [
+            (
+                f"{nomedopdf}_claudeDatosBrutos.json",
+                json.dumps(
+                    result.model_dump(exclude=_EXCLUDE_FIELDS),
+                    ensure_ascii=False, indent=2,
+                ).encode("utf-8"),
+            ),
+            (
+                f"{nomedopdf}_claudeDatosTratados.json",
+                json.dumps(
+                    session_payload.get("factura", {}),
+                    ensure_ascii=False, indent=2,
+                ).encode("utf-8"),
+            ),
+            (
+                f"{nomedopdf}_datosEnviadosalCotizador.json",
+                json.dumps(session_payload, ensure_ascii=False, indent=2).encode("utf-8"),
+            ),
+        ]
 
     # Extracção pelo pipeline de parsers (BaseParser/parser específico)
     parser_json = await _run_parser(pdf_bytes, nomedopdf)
@@ -176,7 +194,8 @@ async def upload_factura_files(
         files.append((f"parser_{nomedopdf}.json", parser_json))
 
     token          = os.getenv("ZOHO_WORKDRIVE_ACCESS_TOKEN", "")
-    subfolder_name = f"DEV_{nomedopdf}_{tarifa_acceso}"
+    prefix         = "ERROR" if is_error else "DEV"
+    subfolder_name = f"{prefix}_{nomedopdf}_{tarifa_acceso}"
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
