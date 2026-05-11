@@ -318,6 +318,66 @@ Nota: "costes_adicionales" y "creditos" pueden ser {} si no hay ninguno.
 
 ## Alterações
 
+### [004] 2026-05-11 — Autoconsumo Batería Virtual + Mínimo Comunitario
+
+**Motivação:** Facturas Naturgy com autoconsumo e Batería Virtual davam margen_de_error 93% por double-counting nos créditos. Mínimo Comunitario (Art. 99.2 Ley 38/1992) aparecia duplicado no cotizador.
+
+**Ficheiros:** `api/claude/mappers/costes.py`, `api/claude/pipeline.py`, `api/routes/facturas.py`
+
+**Regra AUTOCONSUMO adicionada ao costes mapper:**
+```
+AUTOCONSUMO — COMPENSACIÓN DE EXCEDENTES Y BATERÍA VIRTUAL:
+  Usar SOLO el subtotal neto en creditos["compensacion_excedentes_importe"].
+  NUNCA poner valoración + subtotal juntos (doble conteo).
+  NUNCA poner "importe_bateria_virtual" en creditos.
+  Subtotal = valoración excedentes + importe batería virtual.
+```
+
+**Regra MÍNIMO COMUNITARIO adicionada ao costes mapper:**
+```
+CARGO MÍNIMO COMUNITARIO (Art. 99.2 Ley 38/1992):
+  Carga regulatória sobre consumo, não serviço adicional.
+  → costes_adicionales["minimo_comunitario_importe"] = <float positivo>.
+  Señal: "Mínimo comunitario X kWh × 0,001000 €/kWh".
+```
+
+**Fix `_calc_margen` (pipeline.py):** Removido skip de `compensacion_excedentes_importe` — inclui valores negativos de creditos sem excepção.
+
+**Fix `_COSTES_ESTRUTURAIS` (facturas.py):** `minimo_comunitario_importe` adicionado → vai para `importes_totalizados` como campo nomeado; excluído de `costes_totales`.
+
+**Exemplo validado (Naturgy Abril 2026 com autoconsumo):**
+- Antes: margen_de_error 93%, creditos_totales -67.96
+- Depois: margen_de_error 1.14%, creditos_totales -33.98 ✓
+- Mínimo comunitario: sem duplicação ✓
+
+---
+
+### [003] 2026-05-11 — PVPC guardrail energia + regra costes_mercado bulk
+
+**Motivação:** Energía XXI PVPC extraía preços de peaje (0.003 €/kWh P3) como pe_p*. Frontend rejeitava "precio energía fuera de rango: 0.003112 €/kWh".
+
+**Ficheiro:** `api/claude/mappers/energia.py`
+
+**Regra CASO PVPC adicionada (máxima prioridade):**
+```
+CASO PVPC (peajes ATR + costes_mercado bulk):
+  Señal: costes_mercado != null AND costes_producto_por_periodo == null.
+  pe_pN = (peaje_importe_pN + costes_mercado × kwh_pN/total_kwh) / kwh_pN
+  NUNCA usar preços de peaje diretamente como pe_p*.
+```
+
+**Guardrail adicionado:**
+```
+pe_p* < 0.05 €/kWh → SINAL DE ERRO: só peaje usado, não preço total.
+NUNCA devolver pe_p* < 0.05 salvo justificação explícita da factura.
+```
+
+**Exemplo validado (Energía XXI PVPC):**
+- Antes: pe_p3 = 0.003112 (peaje) → rejeitado
+- Depois: pe_p3 ≈ 0.120 €/kWh (peaje + mercado proporcional) ✓
+
+---
+
 ### [002] 2026-05-07 — `bono_social_precio_dia` em €/día (divisão por 365 quando €/año)
 
 **Motivação:** Facturas TotalEnergies (e outras) expressam o Bono Social em €/año

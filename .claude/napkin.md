@@ -57,6 +57,20 @@
 10. **[2026-05-07] Shared geocoding utility — never inline**
     Do instead: use `from api.utils.geo import simplify_address, geocode_address`. Never duplicate in route files — caused circular import when `facturas_ai.py` tried to import from `facturas.py`.
 
+## Pipeline Claude — Casos Especiais
+
+1. **[2026-05-11] PVPC: peajes ≠ preço total de energia**
+   Do instead: detectar `costes_mercado != null` → aplicar CASO PVPC no energia mapper (distribuir bulk por kWh). Guardrail: pe_p* < 0.05 → erro. Afecta Energía XXI, Comercializadora de Referencia.
+
+2. **[2026-05-11] Autoconsumo Batería Virtual: só subtotal neto em creditos**
+   Do instead: `compensacion_excedentes_importe` = subtotal neto (-33.98). NUNCA incluir `valoracion_excedentes` + `subtotal` separados (double-count). NUNCA incluir `importe_bateria_virtual` em creditos.
+
+3. **[2026-05-11] Mínimo Comunitario (Art. 99.2 Ley 38/1992) é IEE, não serviço**
+   Do instead: vai em `costes_adicionales["minimo_comunitario_importe"]` e promovido a `importes_totalizados` como campo nomeado. Excluído de `costes_totales`. Sinal: linha "X kWh × 0,001000 €/kWh".
+
+4. **[2026-05-11] `imp.get(key, {})` não usa default quando chave existe com None**
+   Do instead: usar `imp.get(key) or {}` (e `or []` para listas). Causa: mapper retornou `"iee": null` → `.get("iee", {})` devolve `None` → AttributeError.
+
 ## User Directives
 
 1. **[2026-05-06] Tesseract + Poppler paths are Windows-hardcoded**
