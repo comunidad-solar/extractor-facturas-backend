@@ -114,9 +114,9 @@ def _assemble(raw: dict, mapped: dict) -> ExtractionResponseAI:
 
     # Impuestos
     imp = raw.get("impuestos", {})
-    iee = imp.get("iee", {})
+    iee = imp.get("iee") or {}
     imp_ele = iee.get("porcentaje")
-    iva_lines = imp.get("iva", [])
+    iva_lines = imp.get("iva") or []
     iva_pct = iva_lines[0].get("porcentaje") if iva_lines else None
 
     # IVA block
@@ -325,7 +325,12 @@ def run_pipeline(pdf_bytes: bytes) -> ExtractionResponseAI:
     mapped = _run_mappers(raw)
 
     print("  [Stage 3] Ensamblando ExtractionResponseAI...")
-    result = _assemble(raw, mapped)
+    try:
+        result = _assemble(raw, mapped)
+    except Exception as exc:
+        exc.raw_data    = raw
+        exc.mapped_data = mapped
+        raise
 
     ok = result.margen_de_error is not None and result.margen_de_error <= 5.0
     icon = "✅" if ok else "⚠️ "
