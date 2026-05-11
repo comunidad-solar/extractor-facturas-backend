@@ -63,22 +63,7 @@ async def enviar_datos(
         if existing_session and existing_session.get(field) is not None:
             parsed["factura"].setdefault(field, existing_session[field])
 
-    # --- 2. Encurtar plan_url via TinyURL (não bloqueia em caso de falha) ---
-    plan_url = parsed.get("plan_url")
-    if plan_url:
-        try:
-            async with httpx.AsyncClient(timeout=5) as turl_client:
-                turl_resp = await turl_client.get(
-                    "https://tinyurl.com/api-create.php",
-                    params={"url": plan_url},
-                )
-                if turl_resp.status_code == 200 and turl_resp.text.startswith("http"):
-                    parsed["plan_url"] = turl_resp.text.strip()
-                    print(f"[/enviar] plan_url encurtada: {parsed['plan_url']}")
-        except Exception as e:
-            print(f"[/enviar] TinyURL falhou, usando URL original: {e}")
-
-    # --- 3. Enviar JSON ao Zoho Flow (com factura Claude) ---
+    # --- 2. Enviar JSON ao Zoho Flow (com factura Claude) ---
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             resp = await client.post(ZOHO_WEBHOOK, json=parsed)
@@ -92,7 +77,7 @@ async def enviar_datos(
 
     print(f"[/enviar] Zoho respondió: {resp.status_code}")
 
-    # --- 4. Tentar obter dealId/mpklogId da sessão do /continuar (callback Zoho) ---
+    # --- 3. Tentar obter dealId/mpklogId da sessão do /continuar (callback Zoho) ---
     correo = parsed.get("cliente", {}).get("correo", "")
     deal_id = None
     mpklog_id = None
@@ -108,7 +93,7 @@ async def enviar_datos(
             if mpklog_id:
                 print(f"  ✅  mpklogId via continuar_session: {mpklog_id}")
 
-    # --- 5. Fallback: buscar no Zoho CRM se ainda em falta ---
+    # --- 4. Fallback: buscar no Zoho CRM se ainda em falta ---
     if (deal_id is None or mpklog_id is None) and correo:
         delay = int(os.getenv("ZOHO_DEAL_FETCH_DELAY", "4"))
         await asyncio.sleep(delay)
@@ -125,7 +110,7 @@ async def enviar_datos(
             else:
                 print(f"  ⚠️  mpklogId não encontrado para: {correo}")
 
-    # --- 6. Actualizar ou criar sessão ---
+    # --- 5. Actualizar ou criar sessão ---
     session_payload = {**parsed, "factura": parsed["factura"], "dealId": deal_id, "mpklogId": mpklog_id}
     # Actualizar também dentro de cliente para evitar duplicação
     if "cliente" in session_payload:
