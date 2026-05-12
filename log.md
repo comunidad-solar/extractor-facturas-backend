@@ -2,6 +2,66 @@
 
 ---
 
+## 2026-05-11
+
+### [071] `api/claude/mappers/energia.py` — PVPC guardrail + regra costes_mercado bulk
+**Prompt:** Energía XXI PVPC extraía preços de peaje (0.003 €/kWh) em vez do preço total de energia. Frontend rejeitava com "precio energía fuera de rango".
+
+**Ficheiro:** `api/claude/mappers/energia.py`
+
+**Mudança:** Adicionado CASO PVPC (máxima prioridade): quando `costes_mercado != null` e `costes_producto_por_periodo == null`, distribuir `costes_mercado` proporcionalmente por kWh entre períodos e somar aos peajes. pe_p* = (peaje_pN + costes_mercado×kwh_pN/total_kwh) / kwh_pN. Guardrail: pe_p* < 0.05 €/kWh → sinal de erro (só peaje usado).
+
+**Antes:** pe_p3 = 0.003112 (peaje P3) → rejeitado frontend
+**Depois:** pe_p3 ≈ 0.120 €/kWh (peaje + mercado proporcional) ✓
+
+---
+
+### [072] `api/claude/pipeline.py` — fix NoneType em `iee` e `iva_lines`
+**Prompt:** Factura Naturgy Abril 2026 dava `AttributeError: 'NoneType' object has no attribute 'get'` em `_assemble` linha 118.
+
+**Ficheiro:** `api/claude/pipeline.py`
+
+**Mudança:** `imp.get("iee", {})` → `imp.get("iee") or {}` e `imp.get("iva", [])` → `imp.get("iva") or []`. `.get(key, default)` não usa o default quando a chave existe com valor `None`.
+
+---
+
+### [073] `api/routes/facturas.py` + `api/zoho_workdrive.py` — upload WorkDrive em caso de erro
+**Prompt:** Quando extracção falha, subir PDF + dados parciais + traceback para WorkDrive com prefixo ERROR_.
+
+**Ficheiros:** `api/routes/facturas.py`, `api/zoho_workdrive.py`, `api/claude/pipeline.py`
+
+**Mudança:** Todos os blocos `except` disparam `upload_factura_files(is_error=True, error_msg=..., error_traceback=..., partial_data=...)`. WorkDrive cria pasta `ERROR_{nome}_{tarifa}` com PDF + `_ERROR.json` (error, traceback, filename, partial_data). `_assemble` em pipeline anexa `raw_data`/`mapped_data` à exceção para partial_data.
+
+---
+
+### [074] `api/routes/facturas.py` — `minimo_comunitario_importe` sem double-count
+**Prompt:** 0.27 € (Mínimo Comunitario) aparecia duplicado no cotizador — em `costes_totales` e em `costes.minimo_comunitario_importe`.
+
+**Ficheiro:** `api/routes/facturas.py`
+
+**Mudança:** Adicionado `"minimo_comunitario_importe"` a `_COSTES_ESTRUTURAIS`. `costes_totales` agora exclui estruturais do somatório → só soma serviços dinâmicos (Facilita, Pack Hogar). `minimo_comunitario_importe` vai para `importes_totalizados` como campo nomeado.
+
+**Antes:** `costes_totales: 0.27` + `costes.minimo_comunitario_importe: 0.27` → duplicado
+**Depois:** `costes_totales: 0` + `importes_totalizados.minimo_comunitario_importe: 0.27` ✓
+
+---
+
+### [075] `api/claude/mappers/costes.py` + `api/claude/pipeline.py` — fix autoconsumo Batería Virtual
+**Prompt:** Naturgy com autoconsumo dava margen_de_error 93% por double-counting: valoracion_excedentes + subtotal_compensacion ambos em creditos.
+
+**Ficheiros:** `api/claude/mappers/costes.py`, `api/claude/pipeline.py`
+
+**Mudança costes mapper:** Regra AUTOCONSUMO — usar só o subtotal neto em `creditos["compensacion_excedentes_importe"]`. NUNCA incluir `valoracion_excedentes` + `subtotal` separados. NUNCA incluir `importe_bateria_virtual` em creditos.
+
+**Mudança pipeline `_calc_margen`:** Removido skip de `compensacion_excedentes_importe` — agora soma valores negativos de creditos sem excepção.
+
+**Regra Mínimo Comunitario:** Adicionada ao costes mapper — vai em `costes_adicionales["minimo_comunitario_importe"]`, não como serviço adicional.
+
+**Antes:** margen_de_error 93%, creditos_totales -67.96 (triple-counting)
+**Depois:** margen_de_error 1.14%, creditos_totales -33.98 ✓
+
+---
+
 ## 2026-05-07
 
 ### [064] `api/utils/geo.py` — módulo partilhado de geocodificação

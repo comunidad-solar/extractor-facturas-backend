@@ -88,7 +88,11 @@
       "Bash(python -c \"from api.routes.continuar import router; print\\('ok'\\)\")",
       "Bash(git push *)",
       "PowerShell(Stop-Process -Id \\(Get-NetTCPConnection -LocalPort 8012 -ErrorAction SilentlyContinue\\).OwningProcess -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; Start-Process -FilePath \"uvicorn\" -ArgumentList \"api.main:app --port 8012\" -WorkingDirectory \"c:\\\\Users\\\\ianro\\\\OneDrive\\\\Documentos\\\\GitHub\\\\extractor-facturas-backend\" -WindowStyle Hidden; Start-Sleep -Seconds 3; $c = Get-NetTCPConnection -LocalPort 8012 -ErrorAction SilentlyContinue; if \\($c\\) { \"Server up PID $\\($c.OwningProcess\\)\" } else { \"NOT UP\" })",
-      "PowerShell($conn = Get-NetTCPConnection -LocalPort 8012 -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force; \"Killed PID $\\($conn.OwningProcess\\)\" } else { \"Port free\" })"
+      "PowerShell($conn = Get-NetTCPConnection -LocalPort 8012 -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force; \"Killed PID $\\($conn.OwningProcess\\)\" } else { \"Port free\" })",
+      "WebFetch(domain:workdrive.zoho.com)",
+      "WebSearch",
+      "WebFetch(domain:help.zoho.com)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
