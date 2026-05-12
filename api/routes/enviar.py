@@ -12,6 +12,7 @@ from typing import Any, Dict
 
 from api.zoho_crm import buscar_deal_por_email, buscar_mpklog_por_email
 from api.routes.sesion import crear_sesion, actualizar_sesion, leer_sesion
+from api.zoho_workdrive import upload_pdf_to_deal_workdrive
 
 ZOHO_WEBHOOK = (
     "https://flow.zoho.eu/20067915739/flow/webhook/incoming"
@@ -123,5 +124,16 @@ async def enviar_datos(
     else:
         session_id = crear_sesion(session_payload)
         print(f"[/enviar] Sessão criada (nova): {session_id}")
+
+    # Upload PDF para WorkDrive do deal (non-blocking)
+    extraction_folder_id = (existing_session or {}).get("workdrive_id")
+    if deal_id and extraction_folder_id:
+        print(f"  ⏳  WorkDrive deal: agendando upload PDF → deal {deal_id}")
+        asyncio.create_task(
+            upload_pdf_to_deal_workdrive(
+                deal_id=deal_id,
+                extraction_folder_id=extraction_folder_id,
+            )
+        )
 
     return {"ok": True, "dealId": deal_id, "mpklogId": mpklog_id, "session_id": session_id}

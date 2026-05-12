@@ -234,3 +234,138 @@ async def upload_factura_files(
 
     except Exception as exc:
         print(f"  ❌  WorkDrive upload_factura_files erro inesperado: {exc}")
+
+
+async def _get_deal_workdrive_folder(
+    deal_id: str,
+    crm_token: str,
+    client: httpx.AsyncClient,
+) -> str | None | Literal["UNAUTHORIZED"]:
+    """Busca easyworkdriveforcrm__Workdrive_Folder_ID_EXT do deal no CRM."""
+    from api.zoho_crm import ZOHO_API_DOMAIN
+    url = f"{ZOHO_API_DOMAIN}/crm/v8/Deals/{deal_id}"
+    headers = {"Authorization": f"Zoho-oauthtoken {crm_token}"}
+    r = await client.get(url, params={"fields": "easyworkdriveforcrm__Workdrive_Folder_ID_EXT"}, headers=headers)
+    if r.status_code == 401:
+        return "UNAUTHORIZED"
+    if r.status_code not in (200, 201):
+        print(f"  ⚠️  WorkDrive deal: CRM HTTP {r.status_code} para deal {deal_id}")
+        return None
+    data = r.json().get("data", [])
+    if not data:
+        return None
+    return data[0].get("easyworkdriveforcrm__Workdrive_Folder_ID_EXT")
+
+
+async def _list_folder_files(
+    folder_id: str,
+    token: str,
+    client: httpx.AsyncClient,
+) -> list[dict] | Literal["UNAUTHORIZED"]:
+    """Lista ficheiros numa pasta WorkDrive."""
+    headers = {"Authorization": f"Zoho-oauthtoken {token}"}
+    r = await client.get(f"{_WD_BASE}/files/{folder_id}/files", headers=headers)
+    if r.status_code == 401 or _is_invalid_token(r):
+        return "UNAUTHORIZED"
+    if r.status_code not in (200, 201):
+        return []
+    return r.json().get("data", [])
+
+
+async def _copy_wd_file(
+    file_id: str,
+    target_folder_id: str,
+    token: str,
+    client: httpx.AsyncClient,
+) -> bool | Literal["UNAUTHORIZED"]:
+    """Copia um ficheiro para outra pasta no WorkDrive (server-side, sem download).
+    POST /files/{target_folder_id}/copy com resource_id no body (array).
+    """
+    headers = {
+        "Authorization": f"Zoho-oauthtoken {token}",
+        "Content-Type":  "application/json",
+    }
+    body = {
+        "data": [
+            {
+                "attributes": {"resource_id": file_id},
+                "type": "files",
+            }
+        ]
+    }
+    r = await client.post(f"{_WD_BASE}/files/{target_folder_id}/copy", json=body, headers=headers)
+    if r.status_code == 401 or _is_invalid_token(r):
+        return "UNAUTHORIZED"
+    if r.status_code not in (200, 201):
+        print(f"  ⚠️  WorkDrive _copy_wd_file HTTP {r.status_code}: {r.text[:200]}")
+        return False
+    return True
+
+
+async def upload_pdf_to_deal_workdrive(deal_id: str, extraction_folder_id: str) -> None:
+    """
+    Copia o PDF da factura da pasta de extracção para a pasta WorkDrive do deal.
+    Obtém o folder_id do deal via CRM (easyworkdriveforcrm__Workdrive_Folder_ID_EXT).
+    Nunca lança excepção — erros são apenas logados.
+    """
+    if not deal_id or not extraction_folder_id:
+        return
+
+    try:
+        from api.zoho_crm import refresh_access_token
+
+        crm_token = os.getenv("ZOHO_ACCESS_TOKEN", "")
+        wd_token  = os.getenv("ZOHO_WORKDRIVE_ACCESS_TOKEN", "")
+
+        async with httpx.AsyncClient(timeout=30) as client:
+
+            # 1. Obter folder_id do deal no CRM
+            deal_folder_id = await _get_deal_workdrive_folder(deal_id, crm_token, client)
+            if deal_folder_id == "UNAUTHORIZED":
+                crm_token = await refresh_access_token()
+                deal_folder_id = await _get_deal_workdrive_folder(deal_id, crm_token, client)
+
+            if not deal_folder_id:
+                print(f"  ⚠️  WorkDrive deal: sem folder_id para deal {deal_id}")
+                return
+
+            print(f"  ✅  WorkDrive deal folder: {deal_folder_id}")
+
+            # 2. Listar ficheiros na pasta de extracção → encontrar o PDF
+            files = await _list_folder_files(extraction_folder_id, wd_token, client)
+            if files == "UNAUTHORIZED":
+                wd_token = await refresh_workdrive_token()
+                files = await _list_folder_files(extraction_folder_id, wd_token, client)
+
+            if not files or files == "UNAUTHORIZED":
+                print(f"  ⚠️  WorkDrive deal: sem ficheiros em {extraction_folder_id}")
+                return
+
+            pdf_entry = next(
+                (f for f in files
+                 if f.get("attributes", {}).get("name", "").lower().endswith(".pdf")),
+                None,
+            )
+            if not pdf_entry:
+                print(f"  ⚠️  WorkDrive deal: PDF não encontrado em {extraction_folder_id}")
+                return
+
+            pdf_id        = pdf_entry["id"]
+            pdf_attrs     = pdf_entry.get("attributes", {})
+            pdf_name      = pdf_attrs.get("name", "factura.pdf")
+            pdf_res_id    = pdf_attrs.get("resource_id") or pdf_id
+            print(f"  📄  WorkDrive PDF entry — id:{pdf_id} resource_id:{pdf_res_id} name:{pdf_name}")
+
+            # 3. Copiar PDF para pasta do deal (server-side, sem download)
+            ok = await _copy_wd_file(pdf_res_id, deal_folder_id, wd_token, client)
+            if ok == "UNAUTHORIZED":
+                wd_token = await refresh_workdrive_token()
+                ok = await _copy_wd_file(pdf_id, deal_folder_id, wd_token, client)
+
+            if ok is True:
+                print(f"  ✅  WorkDrive deal: '{pdf_name}' copiado → deal {deal_id} ({deal_folder_id})")
+            else:
+                print(f"  ❌  WorkDrive deal: falhou cópia para deal {deal_id}")
+
+    except Exception as exc:
+        print(f"  ❌  WorkDrive upload_pdf_to_deal_workdrive erro: {exc}")
