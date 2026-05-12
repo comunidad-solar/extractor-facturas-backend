@@ -49,6 +49,12 @@ RAW_SYSTEM_PROMPT = (
     '    "iva": [{"base": <float>, "porcentaje": <int>, "importe": <float>}],\n'
     '    "iee": {"base": <float>, "porcentaje": <float — exacto, ej: 5.11269632>, "importe": <float>}\n'
     "  },\n"
+    "  /* CRÍTICO — campo 'iva' es un ARRAY. Incluir UNA entrada por cada bloque de IVA que aparezca\n"
+    "     en la factura. Ejemplo TotalEnergies con FACILITA:\n"
+    "     [{\"base\": 41.84, \"porcentaje\": 21, \"importe\": 8.79},\n"
+    "      {\"base\": 7.02, \"porcentaje\": 21, \"importe\": 1.47}]\n"
+    "     NUNCA fusionar los dos bloques en uno. Si hay sección SERVICIOS con su propio IVA,\n"
+    "     ese IVA va como segunda entrada en el array 'iva'. */\n"
     '  "alquiler": {\n'
     '    "lineas": [{"precio_dia": <float>, "dias": <int>, "importe": <float>}],\n'
     '    "total": <float>\n'
