@@ -34,8 +34,9 @@ async def _fetch_ids_background(correo: str, session_id: str) -> None:
 
     print(f"[IDs background] INICIO — correo={correo} sessao={session_id[:8]}...")
 
+    MAX_ATTEMPTS = 50  # ~8 minutos máximo (4×3s + 4×5s + 42×10s)
     try:
-        while deal_id is None or mpklog_id is None:
+        while (deal_id is None or mpklog_id is None) and attempt < MAX_ATTEMPTS:
             # Verificar se callback do Zoho já actualizou a sessão
             _sess = leer_sesion(session_id)
             if _sess and _sess.get("dealId") and _sess.get("mpklogId"):
@@ -84,6 +85,10 @@ async def _fetch_ids_background(correo: str, session_id: str) -> None:
                 wait = _delays[attempt - 1] if attempt <= len(_delays) else 10
                 print(f"[IDs background] aguardando {wait}s...")
                 await asyncio.sleep(wait)
+
+        if deal_id is None or mpklog_id is None:
+            print(f"[IDs background] TIMEOUT — {MAX_ATTEMPTS} tentativas esgotadas ({round(time.monotonic()-t0,1)}s) — dealId={deal_id} mpklogId={mpklog_id}")
+            return
 
         # Ambos encontrados — actualizar sessão
         elapsed = round(time.monotonic() - t0, 1)

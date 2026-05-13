@@ -31,6 +31,11 @@ SERVICIOS ADICIONALES (Pack Hogar, Asistente Smart Hogar, Servicio FACILITA, etc
     creditos["descuento_<nombre>"] = importe del descuento (negativo).
   Si no tiene descuento: solo en costes_adicionales.
   Clave: usar snake_case del nombre descriptivo + "_importe" (ej: "asistente_smart_hogar_importe").
+  CRÍTICO — IVA de servicios adicionales:
+    El IVA de un servicio adicional (ej: IVA FACILITA 1.47€) NO es un coste adicional separado.
+    NUNCA crear clave "iva_<nombre>_importe" en costes_adicionales — causaría doble contabilidad.
+    El IVA del servicio ya está contabilizado en el campo imp_iva_eur del JSON raíz.
+    Solo poner en costes_adicionales el importe BASE del servicio sin IVA (ej: servicio_facilita_importe: 7.02).
 
 AUTOCONSUMO — COMPENSACIÓN DE EXCEDENTES Y BATERÍA VIRTUAL:
   Si la factura tiene líneas de autoconsumo (excedentes, batería virtual):
@@ -54,7 +59,9 @@ DESCUENTOS SOBRE CONSUMO (ej: Descuento 15%):
   Clave descriptiva snake_case (ej: "descuento_consumo_15": -6.74).
 
 PRECIO FINAL ENERGÍA ACTIVA:
-  precio_final_energia_activa: usar "termino_energia.total_activa_bruto" (BRUTO, antes de descuentos sobre consumo).
+  precio_final_energia_activa: usar el importe NETO del término de energía activa (DESPUÉS de aplicar cualquier descuento sobre consumo).
+  Ejemplo: '132 kWh × 0.224778 €/kWh = 29.67€ - 7% = 27.59€' → precio_final_energia_activa: 27.59 (no 29.67).
+  El importe bruto antes del descuento va en imp_termino_energia_eur, NO en precio_final_energia_activa.
   Si hay reactiva, NO incluirla en precio_final_energia_activa (eso va en coste_energia_reactiva en importes_totalizados).
 
 Devuelve ÚNICAMENTE este JSON:
